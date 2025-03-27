@@ -1,86 +1,71 @@
-# Apache Stack (Docker-based)
+# Apache Stack: Build from Source using Docker
 
-This project provides a reproducible, portable Docker-based Apache build from source with support for modules like `mod_fcgid`.
+This repository builds Apache HTTPD from source using a Dockerfile based on a clean Debian image. It mirrors the build process described here: https://www.apachelounge.com/viewtopic.php?t=8609 (originally intended for Windows), adapted for Linux in a containerized environment.
 
-## ⚙️ Initial Setup Instructions
+## 🔧 Requirements
+- Docker
+- Docker Compose (v2+)
 
-### 1. Build the Apache Docker Image
+## 📦 Contents
+- `apache/Dockerfile`: Full build from source (Apache, APR, OpenSSL, PCRE, etc.)
+- `docker-compose.yml`: Volume mount setup for editable `conf` and `htdocs`
+- `data/conf`, `data/htdocs`: Your local Apache configuration and web root
 
-You must **manually build the image first** before using `docker compose`:
+## 🧱 Initial Build Setup
+On first use, follow these steps to extract default Apache configuration and htdocs locally:
 
-```bash
-docker build -t apache ./apache
+1. **Uncomment the `apache-init` service** block in `docker-compose.yml`.
+2. Run:
+   ```bash
+   docker compose up --build
+   ```
+   This copies `/usr/local/apache2/conf` and `/usr/local/apache2/htdocs` to `./data/`.
+
+3. Shut down:
+   ```bash
+   docker compose down
+   ```
+   Or in one command:
+   ```bash
+   docker compose up -d ; sleep 10 ; docker compose down
+   ```
+
+4. **Fix permissions** (if needed):
+   ```bash
+   sudo chmod -R a+rwx ./data
+   ```
+
+5. **Edit the following in your local files**:
+   - Open `data/conf/httpd.conf`
+   - Set a valid `ServerName` (e.g., `ServerName localhost`)
+
+6. **Comment out or delete the `apache-init` block** in `docker-compose.yml`.
+
+7. Now start your Apache container normally:
+   ```bash
+   docker compose up
+   ```
+
+## 🗂️ Directory Layout
+```
+├── apache/
+│   └── Dockerfile           # Full source-based Apache build
+├── data/
+│   ├── conf/                # Apache config (mounted into container)
+│   └── htdocs/              # Web content root (mounted into container)
+├── docker-compose.yml
+└── .gitignore
 ```
 
-> This step compiles all dependencies and Apache from source. It may take a while on the first run.
+## 📝 Notes
+- `mod_fcgid` is built manually from source.
+- You can now edit `conf` and `htdocs` locally and changes are reflected immediately in the container.
+- If Apache fails to start, check the logs for `ServerName` or syntax issues.
+
+## ✅ Next Steps
+- Add PHP-FPM support (via another container)
+- Wire in Subversion + Redmine
 
 ---
-
-### 2. Extract Default Config and Web Root
-
-To get a local copy of Apache's config and `htdocs`, you **must uncomment the `apache-init` service** in `docker-compose.yml` temporarily:
-
-```yaml
-# apache-init:
-#   image: apache
-#   command: >
-#     bash -c "
-#       mkdir -p /mnt/conf /mnt/htdocs &&
-#       cp -r /usr/local/apache2/conf/* /mnt/conf 2>/dev/null || true &&
-#       cp -r /usr/local/apache2/htdocs/* /mnt/htdocs 2>/dev/null || true"
-#   volumes:
-#     - ./data/conf:/mnt/conf
-#     - ./data/htdocs:/mnt/htdocs
-#   entrypoint: ""
-```
-
-Then run:
-
-```bash
-docker compose up
-```
-
-This will copy the default Apache configuration and web content into `./data/conf` and `./data/htdocs`.
-
-Once done, **you can comment out `apache-init` again** and proceed to use only the `apache` service.
-
----
-
-### 3. Running Apache with Docker Compose
-
-After config/htdocs are extracted, just run:
-
-```bash
-docker compose up
-```
-
-Apache will run on:
-- `http://localhost:8080`
-- `https://localhost:8443`
-
----
-
-### 4. Editing Configuration or Content
-
-- **Apache config:** `./data/conf/httpd.conf` (and other files in `./data/conf`)
-- **Web root (htdocs):** `./data/htdocs/`
-
-These are bind-mounted into the container, so you can edit them directly on your host.
-
----
-
-### 🛉 Clean Up
-
-To remove the temporary `apache-init` container:
-
-```bash
-docker compose down --remove-orphans
-```
-
----
-
-### 📌 Notes
-
-- `mod_fcgid` is compiled and enabled.
-- PHP and Subversion support coming in future steps.
+Maintained by @ranemstsage
 
