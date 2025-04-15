@@ -1,16 +1,17 @@
-version: '3.9'
-
 services:
   # apache-init:
-  #   image: apache
+  #   build:
+  #     context: ./apache
+  #     dockerfile: Dockerfile
+  #   container_name: apache-init
   #   command: >
   #     bash -c "
   #       mkdir -p /mnt/conf /mnt/htdocs &&
   #       cp -r /usr/local/apache2/conf/* /mnt/conf 2>/dev/null || true &&
   #       cp -r /usr/local/apache2/htdocs/* /mnt/htdocs 2>/dev/null || true"
   #   volumes:
-  #     - ./data/conf:/mnt/conf
-  #     - ./data/htdocs:/mnt/htdocs
+  #     - ~/docker-volumes/apache-stack/conf:/mnt/conf
+  #     - ~/docker-volumes/apache-stack/htdocs:/mnt/htdocs
   #   entrypoint: ""
 
   apache:
@@ -24,6 +25,7 @@ services:
       - "8080:80"
       - "8443:443"
     volumes:
-      - ./data/conf:/usr/local/apache2/conf
-      - ./data/htdocs:/usr/local/apache2/htdocs
+      - ~/docker-volumes/apache-stack/conf:/usr/local/apache2/conf
+      - ~/docker-volumes/apache-stack/htdocs:/usr/local/apache2/htdocs
     restart: unless-stopped
+  
