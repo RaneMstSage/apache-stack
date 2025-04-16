@@ -90,10 +90,6 @@ RUN tar xzf mod_fcgid-2.3.9.tar.gz \
  && make \
  && make install
 
- # Create required directories for DAV (lock DB and uploads) and set permissions
-RUN mkdir -p /usr/local/apache2/var /usr/local/apache2/uploads && \
-chown -R daemon:daemon /usr/local/apache2/var /usr/local/apache2/uploads
-
 # Cleanup
 RUN rm -rf /usr/src/*
 EXPOSE 80 443

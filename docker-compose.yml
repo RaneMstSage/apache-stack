@@ -27,5 +27,7 @@ services:
     volumes:
       - ~/docker-volumes/apache-stack/conf:/usr/local/apache2/conf
       - ~/docker-volumes/apache-stack/htdocs:/usr/local/apache2/htdocs
+      - ~/docker-volumes/apache-stack/var:/usr/local/apache2/var
+      - ~/docker-volumes/apache-stack/uploads:/usr/local/apache2/uploads
+      - ~/docker-volumes/apache-stack/user.passwd:/usr/local/apache2/user.passwd
     restart: unless-stopped
-  

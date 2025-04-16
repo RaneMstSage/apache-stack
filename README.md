@@ -21,32 +21,27 @@ This repository builds Apache HTTPD 2.4.63 from source using a Dockerfile based 
 
 ---
 
-## 🛡️ Initial Setup (One-Time Bootstrap)
+## 🛡️ Setup
 
-On first use, run a temporary container to extract Apache’s default `conf` and `htdocs` for local editing:
+On first use, copy in default `conf` and `htdocs` folders or use pre-distributed versions.
 
-### 1. **Uncomment the `apache-init` service** in `docker-compose.yml`
-### 2. Run:
-```bash
-docker compose up --build
-```
+If you still want to bootstrap with Apache's defaults:
 
-Or use this one-liner:
+### (Optional) Apache Init Workflow:
+Uncomment the `apache-init` block in `docker-compose.yml` and run:
 ```bash
 docker compose up -d ; sleep 10 ; docker compose down
 ```
 
-### 3. Fix permissions (on Linux/WSL):
+Then fix permissions:
 ```bash
-sudo chmod -R a+rwx ./data
+sudo chmod -R a+rwx ~/docker-volumes/apache-stack
 ```
 
-### 4. Edit config:
-- Open `data/conf/httpd.conf`
+Edit `conf/httpd.conf`:
 - Set `ServerName localhost`
 
-### 5. **Comment out the `apache-init` service**
-### 6. Start Apache normally:
+Re-comment `apache-init`, then start:
 ```bash
 docker compose up -d
 ```
@@ -58,9 +53,12 @@ docker compose up -d
 ```
 apache-stack/
 ├── apache/                 # Dockerfile and source build context
-├── data/
+├── docker-volumes/
 │   ├── conf/               # Mounted to /usr/local/apache2/conf
-│   └── htdocs/             # Mounted to /usr/local/apache2/htdocs
+│   ├── htdocs/             # Mounted to /usr/local/apache2/htdocs
+│   ├── uploads/            # Mounted to /usr/local/apache2/uploads (DAV)
+│   ├── var/                # Mounted to /usr/local/apache2/var (for DavLockDB)
+│   └── user.passwd         # Digest auth file
 ├── docker-compose.yml
 └── .gitignore
 ```
@@ -73,48 +71,67 @@ Once the container is running, visit:
 
 - `http://localhost:8080/index.html` — Static HTML/CSS/JS test
 - `http://localhost:8080/lua/info` — mod_lua test (see `luainfo.lua`)
-- `curl -T test.txt http://localhost:8080/webdav/test.txt` — WebDAV upload test
+- `curl --digest -u admin:yourpassword -T test.txt http://localhost:8080/uploads/test.txt` — WebDAV upload test (with auth)
 
-Make sure:
-- `/data/htdocs/webdav` exists and is writable (`chmod 777` or `chown daemon:daemon && chmod 775`)
-- `DavLockDB` is defined and points to a writable path (e.g. `/usr/local/apache2/var/DavLock`)
-- The following directory exists and is writable:
-  ```bash
-  mkdir -p ~/docker-volumes/apache-stack/htdocs/webdav
-  sudo chown -R daemon:daemon ~/docker-volumes/apache-stack/htdocs/webdav
-  chmod -R 775 ~/docker-volumes/apache-stack/htdocs/webdav
-  ```
+Ensure these directories exist and are writable:
+```bash
+mkdir -p ~/docker-volumes/apache-stack/htdocs/webdav
+mkdir -p ~/docker-volumes/apache-stack/uploads
+mkdir -p ~/docker-volumes/apache-stack/var
+
+sudo chown -R daemon:daemon ~/docker-volumes/apache-stack/uploads
+sudo chown -R daemon:daemon ~/docker-volumes/apache-stack/var
+chmod -R 775 ~/docker-volumes/apache-stack/uploads
+chmod -R 775 ~/docker-volumes/apache-stack/var
+```
+
+To create your DAV password file:
+```bash
+htdigest -c ~/docker-volumes/apache-stack/user.passwd DAV-upload admin
+```
 
 ---
 
 ## 📝 Notes
 
-- To enable `mod_lua`, ensure the following is in your `httpd.conf`:
+- Apache must load the following modules:
+  ```apache
+  LoadModule dav_module modules/mod_dav.so
+  LoadModule dav_fs_module modules/mod_dav_fs.so
+  LoadModule dav_lock_module modules/mod_dav_lock.so
+  LoadModule auth_digest_module modules/mod_auth_digest.so
+  ```
+
+- Sample config for DAV + digest auth:
+  ```apache
+  DavLockDB "/usr/local/apache2/var/DavLock"
+
+  Alias /uploads "/usr/local/apache2/uploads"
+
+  <Directory "/usr/local/apache2/uploads">
+      Dav On
+      AuthType Digest
+      AuthName "DAV-upload"
+      AuthUserFile "/usr/local/apache2/user.passwd"
+      AuthDigestProvider file
+
+      <RequireAny>
+          Require method GET POST OPTIONS
+          Require user admin
+      </RequireAny>
+  </Directory>
+  ```
+
+- To enable `mod_lua`, ensure:
   ```apache
   LoadModule lua_module modules/mod_lua.so
   <IfModule lua_module>
       LuaMapHandler "/lua/info" "/usr/local/apache2/htdocs/lua-info.lua"
   </IfModule>
   ```
-- To enable WebDAV support, ensure:
-  - Modules are loaded: `mod_dav`, `mod_dav_fs`, `mod_dav_lock`
-  - You have this in `httpd.conf`:
-    ```apache
-    DavLockDB "/usr/local/apache2/var/DavLock"
 
-    <Directory "/usr/local/apache2/htdocs/webdav">
-        Dav On
-        Options Indexes
-        AllowOverride None
-        Require all granted
-    </Directory>
-    ```
-
-- If Apache exits or logs `AH00526`, check for missing modules like `mod_auth_digest`.
-- If WebDAV fails with 500, it’s almost always a permissions or `DavLockDB` path issue.
-- Logs:
+- Apache logs (real error logs):
   ```bash
-  # To get real Apache errors inside the container:
   docker exec -it apache cat /usr/local/apache2/logs/error_log
   ```
 
@@ -124,7 +141,7 @@ Make sure:
 
 - [ ] Add PHP-FPM via sidecar container (with mod_proxy_fcgi)
 - [ ] Add SVN via mod_dav_svn + Redmine integration
-- [ ] Optionally add Digest or Basic auth to DAV
+- [ ] Replace Digest auth with LDAP-backed auth
 
 ---
 
