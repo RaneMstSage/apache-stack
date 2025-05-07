@@ -1,4 +1,5 @@
 services:
+  # Initial setup services - uncomment to bootstrap configuration
   # apache-init:
   #   build:
   #     context: ./apache
@@ -14,13 +15,24 @@ services:
   #     - ~/docker-volumes/apache-stack/htdocs:/mnt/htdocs
   #   entrypoint: ""
 
+  # php-init:
+  #   build:
+  #     context: ./php
+  #     dockerfile: Dockerfile
+  #   container_name: php-init
+  #   command: >
+  #     bash -c "
+  #       mkdir -p /mnt/php-conf &&
+  #       cp /usr/local/etc/php/php.ini-production /mnt/php-conf/php.ini 2>/dev/null || true"
+  #   volumes:
+  #     - ~/docker-volumes/apache-stack/php:/mnt/php-conf
+  #   entrypoint: ""
+
   apache:
     build:
       context: ./apache
       dockerfile: Dockerfile
     container_name: apache
-    # depends_on:
-    #   - apache-init
     ports:
       - "8080:80"
       - "8443:443"
@@ -30,4 +42,30 @@ services:
       - ~/docker-volumes/apache-stack/var:/usr/local/apache2/var
       - ~/docker-volumes/apache-stack/uploads:/usr/local/apache2/uploads
       - ~/docker-volumes/apache-stack/user.passwd:/usr/local/apache2/user.passwd
+      - ~/docker-volumes/apache-stack/python-apps:/usr/local/apache2/python-apps
+      # Add SVN repositories volume
+      - ~/docker-volumes/apache-stack/svn:/usr/local/apache2/svn
     restart: unless-stopped
+    networks:
+      - apache-network
+    depends_on:
+      - php
+
+  php:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: php-fpm
+    volumes:
+    # Match Apache's path exactly
+      - ~/docker-volumes/apache-stack/htdocs:/usr/local/apache2/htdocs  
+      - ~/docker-volumes/apache-stack/php/php.ini:/usr/local/etc/php/php.ini
+    expose:
+      - "9000"
+    restart: unless-stopped
+    networks:
+      - apache-network
+
+networks:
+  apache-network:
+    driver: bridge
