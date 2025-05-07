@@ -7,6 +7,7 @@ RUN apt update && apt install -y \
     libpsl-dev perl python3 python3-dev python3-venv swig scons apache2-utils openssl ca-certificates \
     sqlite3 libsqlite3-dev libutf8proc-dev libserf-dev uuid-dev liblz4-dev \
     default-jdk libperl-dev ruby ruby-dev \
+    git \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
@@ -134,6 +135,22 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && ldconfig
 
 # Check if modules were installed correctly
 RUN ls -la /usr/local/apache2/modules/mod_*svn* || echo "Apache SVN modules not found"
+
+# Set up SVN repositories directory
+RUN mkdir -p /usr/local/apache2/svn && \
+    chown -R daemon:daemon /usr/local/apache2/svn
+
+# Set up Git HTTP support
+RUN mkdir -p /usr/local/apache2/git && \
+    # Copy Git HTTP backend to CGI directory
+    mkdir -p /usr/local/apache2/cgi-bin && \
+    cp /usr/lib/git-core/git-http-backend /usr/local/apache2/cgi-bin/ && \
+    # Create directory for Git repositories
+    mkdir -p /usr/local/apache2/git && \
+    chown -R daemon:daemon /usr/local/apache2/git
+
+# Set Git default branch to main
+RUN git config --global init.defaultBranch main
 
 # Cleanup
 RUN rm -rf /usr/src/*

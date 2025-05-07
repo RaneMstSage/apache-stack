@@ -43,8 +43,8 @@ services:
       - ~/docker-volumes/apache-stack/uploads:/usr/local/apache2/uploads
       - ~/docker-volumes/apache-stack/user.passwd:/usr/local/apache2/user.passwd
       - ~/docker-volumes/apache-stack/python-apps:/usr/local/apache2/python-apps
-      # Add SVN repositories volume
-      - ~/docker-volumes/apache-stack/svn:/usr/local/apache2/svn
+      - svn_repos:/usr/local/apache2/svn
+      - git_repos:/usr/local/apache2/git
     restart: unless-stopped
     networks:
       - apache-network
@@ -69,3 +69,8 @@ services:
 networks:
   apache-network:
     driver: bridge
+
+# Add this volumes section
+volumes:
+  svn_repos:
+  git_repos:
