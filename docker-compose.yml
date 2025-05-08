@@ -60,6 +60,7 @@ services:
     # Match Apache's path exactly
       - ~/docker-volumes/apache-stack/htdocs:/usr/local/apache2/htdocs  
       - ~/docker-volumes/apache-stack/php/php.ini:/usr/local/etc/php/php.ini
+      - ~/docker-volumes/apache-stack/uploads:/usr/local/apache2/uploads
     expose:
       - "9000"
     restart: unless-stopped
@@ -67,6 +68,7 @@ services:
       - apache-network
 
   mysql:
+    container_name: mysql
     image: mysql:8.0
     volumes:
       - mysql_data:/var/lib/mysql
@@ -79,6 +81,50 @@ services:
       - "3306:3306"
     networks:
       - apache-network
+
+  redmine:
+    container_name: redmine
+    image: redmine:6.0.5
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      REDMINE_DB_MYSQL: mysql
+      REDMINE_DB_DATABASE: ${REDMINE_DB_DATABASE}
+      REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
+      REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
+      REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE}
+    volumes:
+    - ~/docker-volumes/apache-stack/redmine/files:/usr/src/redmine/files
+    - ~/docker-volumes/apache-stack/redmine/plugins:/usr/src/redmine/plugins
+    - ~/docker-volumes/apache-stack/redmine/config:/usr/src/redmine/config
+    - ~/docker-volumes/apache-stack/redmine/themes:/usr/src/redmine/themes
+    networks:
+      - apache-network
+    depends_on:
+      - mysql
+
+  redmine51:
+    container_name: redmine51
+    image: redmine:5.1
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      REDMINE_DB_MYSQL: mysql
+      REDMINE_DB_DATABASE: sagemine
+      REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
+      REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
+      REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE}
+    volumes:
+    - ~/docker-volumes/apache-stack/redmine51/files:/usr/src/redmine/files
+    - ~/docker-volumes/apache-stack/redmine51/plugins:/usr/src/redmine/plugins
+    - ~/docker-volumes/apache-stack/redmine51/config:/usr/src/redmine/config
+    - ~/docker-volumes/apache-stack/redmine51/themes:/usr/src/redmine/public/themes
+    networks:
+      - apache-network
+    depends_on:
+      - mysql
 
 networks:
   apache-network:
