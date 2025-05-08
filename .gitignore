@@ -16,3 +16,14 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Environment variables and secrets
+.env
+*.env
+env/
+secrets/
+*_password.txt
+*_secret.txt
+
+# Docker Compose overrides that might contain credentials
+docker-compose.override.yml
