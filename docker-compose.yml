@@ -84,7 +84,9 @@ services:
 
   redmine:
     container_name: redmine
-    image: redmine:6.0.5
+    build:
+      context: ./redmine
+      dockerfile: Dockerfile
     restart: always
     ports:
       - "3000:3000"
@@ -99,10 +101,13 @@ services:
     - ~/docker-volumes/apache-stack/redmine/plugins:/usr/src/redmine/plugins
     - ~/docker-volumes/apache-stack/redmine/config:/usr/src/redmine/config
     - ~/docker-volumes/apache-stack/redmine/themes:/usr/src/redmine/themes
+    - svn_repos:/usr/src/redmine/svn
+    - git_repos:/usr/src/redmine/git
     networks:
       - apache-network
     depends_on:
       - mysql
+    command: ["rails", "server", "-e", "production", "-p", "3000", "-b", "0.0.0.0"]
 
   redmine51:
     container_name: redmine51
@@ -112,7 +117,7 @@ services:
       - "3001:3000"
     environment:
       REDMINE_DB_MYSQL: mysql
-      REDMINE_DB_DATABASE: sagemine
+      REDMINE_DB_DATABASE: redmine51
       REDMINE_DB_USERNAME: ${REDMINE_DB_USERNAME}
       REDMINE_DB_PASSWORD: ${REDMINE_DB_PASSWORD}
       REDMINE_SECRET_KEY_BASE: ${REDMINE_SECRET_KEY_BASE}

@@ -16,9 +16,27 @@ This repository builds Apache HTTPD 2.4.63 from source using a Dockerfile based 
 - ✅ HTTP/2, Brotli, SSL (OpenSSL 3.x), DAV, Lua
 - ✅ WebDAV support with configurable `DavLockDB`
 - ✅ mod_lua with `LuaMapHandler` working
+- ✅ Python integration via mod_wsgi with virtual environment
 - ✅ Full Subversion 1.14.5 integration with all language bindings (Python, Perl, Ruby, Java)
 - ✅ Git integration with HTTP backend for repository access
+- ✅ PHP 8.2-FPM with optimized extensions
+- ✅ MySQL 8.0 database with persistent storage
+- ✅ Redmine 6.0.5 with custom SageDark theme
 - 🧱 Full control over modules (compiled via `--enable-*` flags)
+
+---
+
+## 🎨 SageDark Theme
+Our custom dark theme for Redmine provides a comprehensive dark mode experience:
+
+### Features
+- Dark background with amber/gold accents, now using #116699 for links
+- Enhanced styling for Scrum/Agile plugin with proper spacing between menu icons
+- Custom styling for NVD3 and XChart visualizations
+- Post-it notes with appropriate contrast in dark mode
+- Consistent color scheme throughout the interface
+
+The theme provides better readability in low-light environments while maintaining professional aesthetics.
 
 ---
 
@@ -52,11 +70,26 @@ docker compose up -d
 ```
 apache-stack/
 ├── apache/                 # Dockerfile and source build context
+├── php/                    # PHP-FPM Dockerfile and configuration
+├── redmine/                # Redmine Dockerfile and customizations
 ├── docker-volumes/         # Host directory bind mounts
 │   ├── conf/               # Mounted to /usr/local/apache2/conf
+│   │   └── extra/          # Additional configuration files
+│   │       ├── httpd-git.conf       # Git integration
+│   │       ├── httpd-lua.conf       # Lua configuration
+│   │       ├── httpd-php-fcgi.conf  # PHP-FPM integration
+│   │       ├── httpd-python.conf    # Python WSGI integration
+│   │       └── httpd-svn.conf       # Subversion integration
 │   ├── htdocs/             # Mounted to /usr/local/apache2/htdocs
 │   ├── uploads/            # Mounted to /usr/local/apache2/uploads (DAV)
 │   ├── var/                # Mounted to /usr/local/apache2/var (for DavLockDB)
+│   ├── python-apps/        # Mounted to /usr/local/apache2/python-apps
+│   ├── php/                # PHP configuration files
+│   ├── redmine/            # Redmine files and themes
+│   │   ├── files/          # Redmine file attachments
+│   │   ├── plugins/        # Redmine plugins (incl. Scrum/Agile)
+│   │   ├── config/         # Redmine configuration
+│   │   └── themes/         # Redmine themes (incl. SageDark)
 │   └── user.passwd         # Auth file for SVN and Git
 ├── docker-compose.yml      # Defines services and volumes
 └── .gitignore
@@ -66,6 +99,7 @@ apache-stack/
 ```
 svn_repos               # Docker volume for SVN repositories
 git_repos               # Docker volume for Git repositories
+mysql_data              # Docker volume for MySQL data
 ```
 
 The SVN and Git repositories are stored in Docker volumes for better performance, especially when running in WSL environments. These volumes are managed by Docker rather than being bind-mounted from the host filesystem.
@@ -76,8 +110,11 @@ The SVN and Git repositories are stored in Docker volumes for better performance
 Once the container is running, visit:
 - `http://localhost:8080/index.html` — Static HTML/CSS/JS test
 - `http://localhost:8080/lua/info` — mod_lua test (see `luainfo.lua`)
+- `http://localhost:8080/python` — Python WSGI application test
 - `http://localhost:8080/svn` — Subversion repository browser
 - `http://localhost:8080/git` — Git repositories access
+- `http://localhost:3000/` — Redmine with SageDark theme
+- `http://localhost:3001/` — Secondary Redmine 5.1 instance
 - `curl --digest -u admin:yourpassword -T test.txt http://localhost:8080/uploads/test.txt` — WebDAV upload test (with auth)
 
 Ensure these directories exist and are writable:
@@ -127,33 +164,165 @@ htdigest -c ~/docker-volumes/apache-stack/user.passwd DAV-upload admin
   </Directory>
   ```
 
+### MySQL Configuration
+The stack includes a MySQL 8.0 database server with the following features:
+- Persistent data storage via Docker volume
+- Environment variable configuration for security
+- Separate databases for multiple Redmine instances
+- Shared network with Apache and PHP services
+
+```yaml
+mysql:
+  container_name: mysql
+  image: mysql:8.0
+  volumes:
+    - mysql_data:/var/lib/mysql
+  environment:
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_DATABASE: ${MYSQL_DATABASE}
+    MYSQL_USER: ${MYSQL_USER}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  ports:
+    - "3306:3306"
+  networks:
+    - apache-network
+```
+
+To connect to the MySQL database:
+```bash
+docker exec -it mysql mysql -u root -p
+```
+
+### PHP Configuration
+The PHP container uses PHP 8.2-FPM with the following optimizations:
+```Dockerfile
+FROM php:8.2-fpm
+
+# Install common PHP extensions
+RUN apt-get update && apt-get install -y \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libzip-dev \
+        libxml2-dev \
+        libonig-dev \
+    && docker-php-ext-install -j$(nproc) \
+        gd \
+        mysqli \
+        pdo_mysql \
+        zip \
+        opcache \
+        mbstring \
+        xml
+
+# Set recommended PHP.ini settings
+RUN { \
+        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.interned_strings_buffer=8'; \
+        echo 'opcache.max_accelerated_files=4000'; \
+        echo 'opcache.revalidate_freq=2'; \
+        echo 'opcache.fast_shutdown=1'; \
+        echo 'opcache.enable_cli=1'; \
+    } > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+WORKDIR /var/www/html
+```
+
+To integrate PHP with Apache, we use this configuration (`conf/extra/httpd-php-fcgi.conf`):
+```apache
+# Enable PHP file handling via FPM/FastCGI
+<FilesMatch \.php$>
+    SetHandler "proxy:fcgi://php:9000"
+</FilesMatch>
+
+# Set up .php file support
+<IfModule dir_module>
+    DirectoryIndex index.php index.html
+</IfModule>
+
+# Application settings
+AddType application/x-httpd-php .php
+AddType application/x-httpd-php-source .phps
+```
+
+### Python WSGI Configuration
+The stack includes mod_wsgi for running Python applications. The configuration (`conf/extra/httpd-python.conf`):
+```apache
+# Python WSGI Configuration
+LoadModule wsgi_module modules/mod_wsgi.so
+
+<IfModule wsgi_module>
+    # Point to the virtual environment instead of system Python
+    WSGIPythonHome /usr/local/apache2/python-env
+    WSGIPythonPath /usr/local/apache2/python-apps
+    
+    <Directory /usr/local/apache2/python-apps>
+        Options ExecCGI
+        Require all granted
+    </Directory>
+
+    WSGIScriptAlias /python /usr/local/apache2/python-apps/app.wsgi
+</IfModule>
+```
+
+### Lua Configuration
+To enable `mod_lua`, we use this configuration (`conf/extra/httpd-lua.conf`):
+```apache
+<IfModule lua_module>
+    # Map /lua/info to our lua-info.lua script
+    LuaMapHandler "/lua/info" "/usr/local/apache2/htdocs/lua-info.lua"
+</IfModule>
+```
+
 ### Subversion Configuration
-- Create `conf/extra/httpd-svn.conf` with:
-  ```apache
-  # Load Subversion modules
-  LoadModule dav_module modules/mod_dav.so
-  LoadModule dav_fs_module modules/mod_dav_fs.so
-  LoadModule dav_svn_module modules/mod_dav_svn.so
-  LoadModule authz_svn_module modules/mod_authz_svn.so
-  
-  # Repository configuration
-  <Location /svn>
-      DAV svn
-      SVNParentPath /usr/local/apache2/svn
-      SVNListParentPath On
-      
-      # Authentication settings
-      AuthType Basic
-      AuthName "Subversion Repository"
-      AuthUserFile /usr/local/apache2/user.passwd
-      Require valid-user
-  </Location>
-  ```
-- Include this file in your `httpd.conf`:
-  ```apache
-  # Subversion configuration
-  Include conf/extra/httpd-svn.conf
-  ```
+Our SVN integration uses this configuration (`conf/extra/httpd-svn.conf`):
+```apache
+# Load Subversion modules
+LoadModule dav_module modules/mod_dav.so
+LoadModule dav_fs_module modules/mod_dav_fs.so
+LoadModule dav_svn_module modules/mod_dav_svn.so
+LoadModule authz_svn_module modules/mod_authz_svn.so
+
+# Repository configuration
+<Location /svn>
+    DAV svn
+    SVNParentPath /usr/local/apache2/svn
+    SVNListParentPath On
+    
+    # Authentication settings
+    AuthType Basic
+    AuthName "Subversion Repository"
+    AuthUserFile /usr/local/apache2/user.passwd
+    Require valid-user
+</Location>
+```
+
+### Git Configuration
+Our Git integration uses this configuration (`conf/extra/httpd-git.conf`):
+```apache
+# Set up Git environment
+SetEnv GIT_PROJECT_ROOT /usr/local/apache2/git
+SetEnv GIT_HTTP_EXPORT_ALL
+
+# Map /git/ to the Git HTTP backend
+ScriptAlias /git/ /usr/local/apache2/cgi-bin/git-http-backend/
+
+<Directory "/usr/local/apache2/cgi-bin">
+    # Permit CGI execution
+    Options +ExecCGI
+    Require all granted
+    # For Linux, we need a different handler since there's no .exe
+    AddHandler cgi-script .cgi
+</Directory>
+
+<Location /git>
+    # Basic auth
+    AuthType Basic
+    AuthName "Git Repository"
+    AuthUserFile /usr/local/apache2/user.passwd
+    Require valid-user
+</Location>
+```
 
 ### Creating Subversion Repositories
 To create a Subversion repository:
@@ -170,37 +339,6 @@ echo "Test file" > testfile.txt
 svn add testfile.txt
 svn commit -m "Initial commit" --username username
 ```
-
-### Git Configuration
-- Create `conf/extra/httpd-git.conf` with:
-  ```apache
-  # Git configuration
-  <Directory "/usr/local/apache2/git">
-      Options None
-      AllowOverride None
-      Require all granted
-  </Directory>
-
-  # Set environment variables for Git
-  SetEnv GIT_PROJECT_ROOT /usr/local/apache2/git
-  SetEnv GIT_HTTP_EXPORT_ALL
-
-  # Configure the Git HTTP backend
-  ScriptAlias /git/ /usr/local/apache2/cgi-bin/git-http-backend/
-
-  # Add authentication for Git operations
-  <LocationMatch "^/git/(.*/)?(.+\.git)/(git-(upload|receive)-pack)$">
-      AuthType Basic
-      AuthName "Git Repository"
-      AuthUserFile /usr/local/apache2/user.passwd
-      Require valid-user
-  </LocationMatch>
-  ```
-- Include this file in your `httpd.conf`:
-  ```apache
-  # Git configuration
-  Include conf/extra/httpd-git.conf
-  ```
 
 ### Creating Git Repositories
 To create a Git repository:
@@ -226,29 +364,40 @@ git push -u origin main
 
 Note: Both SVN and Git repositories use the same authentication system, so users created for SVN access can also be used for Git.
 
-### Lua Configuration
-- To enable `mod_lua`, ensure:
-  ```apache
-  LoadModule lua_module modules/mod_lua.so
-  <IfModule lua_module>
-      LuaMapHandler "/lua/info" "/usr/local/apache2/htdocs/lua-info.lua"
-  </IfModule>
-  ```
+### Redmine with SageDark Theme
+The Redmine instance is configured with custom styling for better dark mode experience. The SageDark theme includes custom CSS for:
+- Main Redmine interface
+- Scrum/Agile plugin with properly spaced menu items
+- NVD3 charts in dark mode
+- XChart visualizations in dark mode
+
+The theme is configured to use #116699 as the link color for better readability against the dark background.
 
 ### Checking Logs
 - Apache logs (real error logs):
   ```bash
   docker exec -it apache cat /usr/local/apache2/logs/error_log
   ```
+- Redmine logs:
+  ```bash
+  docker exec -it redmine cat /usr/src/redmine/log/production.log
+  ```
+- MySQL logs:
+  ```bash
+  docker exec -it mysql bash -c "tail -f /var/log/mysql/error.log"
+  ```
 
 ---
 
 ## ✅ Next Steps
-- [x] Add PHP-FPM via sidecar container (with mod_proxy_fcgi) ✓ (Already implemented)
+- [x] Add PHP-FPM via sidecar container (with mod_proxy_fcgi)
 - [x] Add SVN via mod_dav_svn
 - [x] Add Git integration via HTTP backend
-- [ ] Add Redmine integration
+- [x] Add Python WSGI integration
+- [x] Add Redmine integration with custom SageDark theme
+- [x] Add MySQL database for Redmine and future applications
 - [ ] Replace Basic auth with LDAP-backed auth
+- [ ] Add Nginx reverse proxy configuration
 
 ---
 
