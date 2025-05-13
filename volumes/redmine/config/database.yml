@@ -1,0 +1,7 @@
+production:
+  adapter: mysql2
+  host: "mysql"
+  port: "3306"
+  username: "username"
+  password: "password"
+  database: "datanase"

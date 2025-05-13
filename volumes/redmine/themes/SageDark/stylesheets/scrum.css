@@ -1,0 +1,904 @@
+/**********************************************************/
+/* SCRUM/AGILE PLUGIN STYLING FOR SAGEDARK THEME */
+/**********************************************************/
+
+/* Target the specific menu container */
+.contextual.scrum-menu {
+  background-color: #222 !important;
+  padding: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  border-radius: 3px !important;
+  margin-bottom: 10px !important;
+}
+
+/* All links in the menu */
+.contextual.scrum-menu a.icon {
+  margin-right: 30px !important; /* Add spacing between menu items */
+  color: #B8860B !important;
+  text-decoration: none !important;
+  padding-left: 20px !important; /* Space for the icon */
+  background-position: left center !important;
+  background-repeat: no-repeat !important;
+  display: inline-block !important;
+  white-space: nowrap !important;
+  filter: brightness(1.4) contrast(1.2) !important;
+}
+
+/* Fix specific spacing for the main nav items */
+.contextual.scrum-menu a.icon-sprint-board,
+.contextual.scrum-menu a.icon-burndown,
+.contextual.scrum-menu a.icon-stats {
+  margin-right: 0px !important;
+}
+
+/* Smaller spacing for the action icons */
+.contextual.scrum-menu a.icon-add,
+.contextual.scrum-menu a.icon-edit,
+.contextual.scrum-menu a.icon-del,
+.contextual.scrum-menu a.icon-time-add {
+  margin-right: 0px !important;
+}
+
+/* Last item doesn't need right margin */
+.contextual.scrum-menu a.icon-help {
+  margin-right: 0 !important;
+  margin-left: auto !important; /* Push it to the far right */
+}
+
+/* Icon hover effect */
+.contextual.scrum-menu a.icon:hover {
+  color: #fff !important;
+  background-color: #333 !important;
+  border-radius: 3px !important;
+  text-decoration: none !important;
+}
+
+/* Fix icon element heights */
+.contextual.scrum-menu a.icon {
+  min-height: 16px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  padding-right: 5px !important;
+}
+
+/* Icon styles for all scrum-related icons - SCOPE LIMITED TO SCRUM */
+.scrum-menu .icon-blocked,
+.scrum-menu .icon-burndown,
+.scrum-menu .icon-sprint-board,
+.scrum-menu .icon-sprint-end,
+.scrum-menu .icon-sprint-start,
+.scrum-menu .icon-product-backlog,
+.scrum-menu .icon-release-plan,
+.scrum-menu .icon-move-top,
+.scrum-menu .icon-move-bottom,
+.scrum-menu .icon-fullscreen,
+.scrum-menu .icon-normal-screen,
+.scrum-menu .icon-log-time,
+.scrum-menu .icon-vertical-drag-and-drop,
+.scrum-menu .icon-stats,
+.scrum-menu .icon-add,
+.scrum-menu .icon-edit,
+.scrum-menu .icon-del,
+.scrum-menu .icon-time-add,
+.scrum-menu .icon-help {
+  filter: brightness(1.4) contrast(1.2) !important;
+  background-position: 0 50% !important;
+  padding-left: 20px !important;
+  padding-top: 2px !important;
+  padding-bottom: 3px !important;
+}
+
+/* Special treatment for deviation icons */
+.icon-major-deviation {
+  background-image: url(../../../images/exclamation.png) !important;
+  filter: invert(20%) sepia(100%) saturate(7462%) hue-rotate(358deg) brightness(95%) contrast(124%) !important;
+}
+
+.icon-minor-deviation {
+  background-image: url(../../../images/warning.png) !important;
+  filter: invert(72%) sepia(78%) saturate(628%) hue-rotate(359deg) brightness(102%) contrast(107%) !important;
+}
+
+.icon-below-deviation {
+  background-image: url(../../../images/lightning.png) !important;
+  filter: invert(27%) sepia(51%) saturate(2476%) hue-rotate(166deg) brightness(104%) contrast(97%) !important;
+}
+
+.float-icon {
+  float: right !important;
+  min-height: 16px !important;
+  padding-left: 16px !important;
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+}
+
+/* Post-it note styling - maintain bright colors with dark text for readability */
+.post-it {
+  overflow: hidden !important;
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.8) !important;
+  -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.8) !important;
+  -o-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.8) !important;
+  -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.8) !important;
+  transition: transform 0.15s linear !important;
+  -moz-transition: -moz-transform 0.15s linear !important;
+  -o-transition: -o-transform 0.15s linear !important;
+  -webkit-transition: -webkit-transform 0.15s linear !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  color: #222 !important;
+}
+
+.post-it input, .post-it textarea, .post-it select {
+  color: #222 !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.post-it input:focus, .post-it textarea:focus, .post-it select:focus {
+  background-color: #fff !important;
+  color: #000 !important;
+  border-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Post-it hover and scale effects */
+.post-it-scale:hover {
+  z-index: 100 !important;
+  transform: scale(1.14) !important;
+  -moz-transform: scale(1.14) !important;
+  -o-transform: scale(1.14) !important;
+  -webkit-transform: scale(1.14) !important;
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.9) !important;
+}
+
+.post-it-small-scale:hover {
+  z-index: 100 !important;
+  transform: scale(1.02, 1.14) !important;
+  -moz-transform: scale(1.02, 1.14) !important;
+  -o-transform: scale(1.02, 1.14) !important;
+  -webkit-transform: scale(1.02, 1.14) !important;
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Post-it color variations - matching the screenshots while enhancing for dark background */
+/* Yellows */
+.post-it-color-1, .post-it-color-5 {
+  background-image: linear-gradient(to bottom, #FFFFDD 0%, #F5F5A0 100%) !important;
+  color: #222 !important;
+}
+
+/* Purples */
+.post-it-color-2, .post-it-color-10 {
+  background-image: linear-gradient(to bottom, #ECD5F5 0%, #DCB0F0 100%) !important;
+  color: #222 !important;
+}
+
+/* Greens */
+.post-it-color-3, .post-it-color-9 {
+  background-image: linear-gradient(to bottom, #C6FFCA 0%, #9EFFA5 100%) !important;
+  color: #222 !important;
+}
+
+/* Blues */
+.post-it-color-4 {
+  background-image: linear-gradient(to bottom, #C8E7FF 0%, #A3C5DD 100%) !important;
+  color: #222 !important;
+}
+
+/* Reds/Pinks */
+.post-it-color-6, .post-it-color-7 {
+  background-image: linear-gradient(to bottom, #FFCECE 0%, #FFB3B8 100%) !important;
+  color: #222 !important;
+}
+
+/* Grays */
+.post-it-color-8 {
+  background-image: linear-gradient(to bottom, #FAFAFA 0%, #DADADA 100%) !important;
+  color: #222 !important;
+}
+
+/* Post-it rotation effects - ensure they work with transforms */
+.post-it-rotation-0 {
+}
+
+.post-it-rotation-1 {
+  transform: rotate(-0.5deg) !important;
+  -o-transform: rotate(-0.5deg) !important;
+  -webkit-transform: rotate(-0.5deg) !important;
+  -moz-transform: rotate(-0.5deg) !important;
+}
+
+.post-it-rotation-2 {
+  transform: rotate(0.5deg) !important;
+  -o-transform: rotate(0.5deg) !important;
+  -webkit-transform: rotate(0.5deg) !important;
+  -moz-transform: rotate(0.5deg) !important;
+}
+
+.post-it-rotation-3 {
+  transform: rotate(-1deg) !important;
+  -o-transform: rotate(-1deg) !important;
+  -webkit-transform: rotate(-1deg) !important;
+  -moz-transform: rotate(-1deg) !important;
+}
+
+.post-it-rotation-4 {
+  transform: rotate(1deg) !important;
+  -o-transform: rotate(1deg) !important;
+  -webkit-transform: rotate(1deg) !important;
+  -moz-transform: rotate(1deg) !important;
+}
+
+.post-it-small-rotation-0 {
+}
+
+.post-it-small-rotation-1 {
+  transform: rotate(-0.1deg) !important;
+  -o-transform: rotate(-0.1deg) !important;
+  -webkit-transform: rotate(-0.1deg) !important;
+  -moz-transform: rotate(-0.1deg) !important;
+}
+
+.post-it-small-rotation-2 {
+  transform: rotate(0.1deg) !important;
+  -o-transform: rotate(0.1deg) !important;
+  -webkit-transform: rotate(0.1deg) !important;
+  -moz-transform: rotate(0.1deg) !important;
+}
+
+.post-it-small-rotation-3 {
+  transform: rotate(-0.2deg) !important;
+  -o-transform: rotate(-0.2deg) !important;
+  -webkit-transform: rotate(-0.2deg) !important;
+  -moz-transform: rotate(-0.2deg) !important;
+}
+
+.post-it-small-rotation-4 {
+  transform: rotate(0.2deg) !important;
+  -o-transform: rotate(0.2deg) !important;
+  -webkit-transform: rotate(0.2deg) !important;
+  -moz-transform: rotate(0.2deg) !important;
+}
+
+/* Post-it legend and font styling */
+.post-it-legend {
+  font-style: italic !important;
+  font-size: 80% !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Product Backlog Items styling */
+ul.pbis {
+  padding: 10px 0px 15px 0px !important;
+  width: 90% !important;
+  margin: 0px auto 0px auto !important;
+  background-color: #222 !important;
+}
+
+ul.pbis li {
+  list-style: none !important;
+  padding: 3px 20px 3px 20px !important;
+  margin-bottom: 10px !important;
+  background-color: transparent !important;
+  border-radius: 6px !important;
+  border: 1px solid #444 !important;
+}
+
+ul.pbis li table {
+  width: 100% !important;
+}
+
+ul.pbis li table tr {
+  vertical-align: middle !important;
+}
+
+ul.pbis li table tr td.header-1, ul.pbis li table tr td.header-2 {
+  font-size: 0.8em !important;
+  font-style: italic !important;
+  color: #373737 !important;
+  width: 50% !important;
+}
+
+ul.pbis li table tr td.header-1 {
+  text-align: left !important;
+}
+
+.pb-pbi-mini-post-its-container {
+  font-size: 1.4em !important;
+  color: #e1e1e1 !important;
+}
+
+ul.pbis li table tr td.header-2 {
+  text-align: right !important;
+}
+
+ul.pbis li table tr td.story-points {
+  width: 6em !important;
+  min-width: 6em !important;
+  font-style: italic !important;
+  color: #aaa !important;
+  white-space: nowrap !important;
+}
+
+ul.pbis li table tr td.story-points input {
+  font-size: 2em !important;
+  font-weight: bold !important;
+  text-align: right !important;
+  min-width: 2em !important;
+  background-color: #333 !important;
+  color: #e1e1e1 !important;
+  border-color: #444 !important;
+}
+
+ul.pbis li table tr td.story-points-legend {
+  font-style: italic !important;
+  color: #aaa !important;
+  min-width: 20px !important;
+}
+
+ul.pbis li table tr td.content {
+  width: 100% !important;
+  font-size: 1.2em !important;
+  color: #1013d1 !important;
+}
+
+/* Sprint Board styling */
+table.sprint-board {
+  border-collapse: collapse !important;
+  overflow: auto !important;
+  width: 90% !important;
+  margin: 0px auto 10px auto !important;
+  background-color: transparent !important;
+}
+
+table.sprint-board tr.sprint-board {
+  vertical-align: top !important;
+}
+
+table.sprint-board tr.sprint-board th.sprint-board,
+table.sprint-board tr.sprint-board td.sprint-board {
+  min-width: 13em !important;
+  padding-left: 0.8em !important;
+  padding-top: 0.8em !important;
+}
+
+table.sprint-board tr.sprint-board th.sprint-board {
+  border-bottom: 0.2em solid #333 !important;
+  background-color: #222 !important;
+  color: #e1e1e1 !important;
+}
+
+table.sprint-board tr.sprint-board td.sprint-board {
+  border: 0.2em solid #333 !important;
+  background-color: #222 !important;
+  color: #e1e1e1 !important;
+}
+
+.sprint-row-space {
+  border: 0.2em solid #333 !important;
+  height: 11em !important;
+  background-color: #1a1a1a !important;
+}
+
+/* Sprint tasks styling */
+table.sprint-pbi, table.sprint-task {
+  margin-right: 0.8em !important;
+  margin-bottom: 0.8em !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+table.sprint-pbi {
+  float: left !important;
+}
+
+table.sprint-pbi-big {
+  width: 26em !important;
+  height: 17em !important;
+  font-size: 160% !important;
+}
+
+table.sprint-pbi-medium {
+  width: 21em !important;
+  height: 13em !important;
+  font-size: 130% !important;
+}
+
+table.sprint-pbi-small {
+  width: 16em !important;
+  height: 9em !important;
+  font-size: 100% !important;
+}
+
+table.sprint-task {
+  float: left !important;
+}
+
+table.sprint-task-big {
+  width: 23em !important;
+  height: 17em !important;
+  font-size: 160% !important;
+}
+
+table.sprint-task-medium {
+  width: 18em !important;
+  height: 13em !important;
+  font-size: 130% !important;
+}
+
+table.sprint-task-small {
+  width: 13em !important;
+  height: 9em !important;
+  font-size: 100% !important;
+}
+
+table.sprint-pbi tr, table.sprint-task tr {
+  vertical-align: top !important;
+}
+
+table.sprint-pbi tr td.content, table.sprint-task tr td.content,
+table.sprint-pbi tr td.content div.content, table.sprint-task tr td.content div.content {
+  height: 100% !important;
+  position: relative !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 3px !important;
+}
+
+table.sprint-pbi, table.sprint-task {
+  padding-left: 0.3em !important;
+  padding-top: 0.1em !important;
+  padding-right: 0.3em !important;
+  padding-bottom: 0 !important;
+}
+
+table.sprint-pbi tr td.content, table.sprint-task tr td.content,
+table.sprint-pbi tr td.content div.content, table.sprint-task tr td.content div.content,
+table.sprint-pbi tr td.estimation, table.sprint-task tr td.estimation,
+table.sprint-pbi tr td.spent, table.sprint-task tr td.spent,
+table.sprint-pbi tr td.pending, table.sprint-task tr td.pending {
+  padding: 0px !important;
+}
+
+table.sprint-pbi tr td.estimation, table.sprint-task tr td.estimation {
+  vertical-align: middle !important;
+}
+
+table.sprint-pbi tr td.spent, table.sprint-task tr td.spent {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+table.sprint-pbi tr td.pending, table.sprint-task tr td.pending {
+  text-align: right !important;
+  vertical-align: middle !important;
+}
+
+table.sprint-pbi input, table.sprint-task input {
+  text-align: right !important;
+  vertical-align: middle !important;
+  width: 2em !important;
+  height: min-content !important;
+}
+
+/* Editable time input styling */
+.editable-time {
+  font-size: 1.1em !important;
+  padding: 0px !important;
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+}
+
+/* People indicators */
+.doers-reviewers-post-its-container {
+  position: absolute !important;
+  right: 0px !important;
+  bottom: 0px !important;
+  overflow: visible !important;
+  max-width: 9em !important;
+}
+
+.doer-post-it, .reviewer-post-it, .blocked-post-it {
+  height: 1.3em !important;
+  font-size: 0.8em !important;
+  margin: 3px 0px 0px 0px !important;
+  border-radius: 3px !important;
+  padding: 1px 3px 1px 3px !important;
+  text-align: left !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Doer/Reviewer/Blocked post-it styling - more visible with color coding */
+.doer-post-it {
+  background-color: #F0A850 !important;
+  color: #222 !important;
+  border: 1px solid #BB7B30 !important;
+}
+
+.reviewer-post-it {
+  background-color: #60B060 !important;
+  color: #222 !important;
+  border: 1px solid #408040 !important;
+}
+
+.blocked-post-it {
+  background-color: #D04040 !important;
+  color: #EEE !important;
+  border: 1px solid #802020 !important;
+}
+
+.post-it .gravatar {
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+/* Custom menu styling */
+.scrum-custom-menu {
+  display: none !important;
+  z-index: 1000 !important;
+  position: absolute !important;
+  background-color: #333 !important;
+  border: 1px solid #555 !important;
+  padding: 15px 5px 5px 5px !important;
+  -moz-border-radius: 5px !important;
+  border-radius: 5px !important;
+  color: #e1e1e1 !important;
+}
+
+.scrum-custom-menu .close-icon {
+  margin-top: -7px !important;
+  margin-right: -8px !important;
+}
+
+.scrum-custom-menu fieldset {
+  border: 1px solid #444 !important;
+  -moz-border-radius: 5px !important;
+  border-radius: 5px !important;
+  color: #e1e1e1 !important;
+  margin-top: 5px !important;
+}
+
+.scrum-custom-menu fieldset legend, .scrum-custom-menu label {
+  font-style: italic !important;
+  color: #aaa !important;
+}
+
+.scrum-custom-menu label {
+  float: left !important;
+}
+
+.scrum-custom-menu p {
+  margin-left: 100px !important;
+}
+
+/* Cursor styling for moving post-its */
+.post-it-horizontal-move-cursor {
+  cursor: ew-resize !important;
+}
+
+.post-it-vertical-move-cursor {
+  cursor: ns-resize !important;
+}
+
+/* Rotation styling */
+.rotate {
+  -webkit-transform: rotate(-90deg) !important;
+  -moz-transform: rotate(-90deg) !important;
+  -ms-transform: rotate(-90deg) !important;
+  -o-transform: rotate(-90deg) !important;
+  filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3) !important;
+}
+
+/* Burndown chart styling */
+.burndown {
+  width: 90% !important;
+  text-align: center !important;
+  background-color: #222 !important;
+  padding: 10px !important;
+  border-radius: 5px !important;
+  border: 1px solid #444 !important;
+}
+
+/* Dialog styling */
+.scrum-dialog {
+  display: none !important;
+  background-color: #222 !important;
+  border: 1px solid #444 !important;
+  color: #e1e1e1 !important;
+}
+
+/* Tooltip styling - FIX FOR VISIBILITY */
+.graphic-tooltip {
+  position: absolute !important;
+  background: #333 !important;
+  color: #e1e1e1 !important;
+  -webkit-border-radius: 3px !important;
+  -moz-border-radius: 3px !important;
+  -ms-border-radius: 3px !important;
+  -o-border-radius: 3px !important;
+  border-radius: 3px !important;
+  padding: 5px !important;
+  -webkit-box-shadow: 0 1px 3px #000 !important;
+  -moz-box-shadow: 0 1px 3px #000 !important;
+  -ms-box-shadow: 0 1px 3px #000 !important;
+  -o-box-shadow: 0 1px 3px #000 !important;
+  box-shadow: 0 1px 3px #000 !important;
+  border-collapse: separate !important;
+  z-index: 9999 !important; /* Increased z-index to ensure visibility */
+}
+
+/* Only hide tooltip when explicitly set to display:none */
+.graphic-tooltip:not([style*="display: none"]) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure tooltip text is visible */
+.graphic-tooltip * {
+  color: #e1e1e1 !important;
+}
+
+/* Modal issue menu styling */
+.modal-issue-menu {
+  text-align: right !important;
+  margin-bottom: 0.5em !important;
+  font-size: 0.9em !important;
+  background-color: #222 !important;
+  color: #e1e1e1 !important;
+  border-bottom: 1px solid #444 !important;
+}
+
+/* License iframe */
+#licenseIframe {
+  width: 820px !important;
+  height: 580px !important;
+}
+
+/* Stats table styling */
+table.scrum-stats-table {
+  width: 90% !important;
+  margin-left: 5% !important;
+  margin-right: 5% !important;
+  border-collapse: collapse !important;
+}
+
+table.scrum-stats-table tbody tr.double-row:nth-child(4n+0),
+table.scrum-stats-table tbody tr.double-row:nth-child(4n+3),
+table.scrum-stats-table thead tr.double-row {
+  background: #2a3b46 !important;
+}
+
+table.scrum-stats-table tbody tr.double-row:nth-child(4n+1),
+table.scrum-stats-table tbody tr.double-row:nth-child(4n+2) {
+  background: #222 !important;
+}
+
+table.scrum-stats-table tbody tr:nth-child(2n+0),
+table.scrum-stats-table thead tr {
+  background: #2a3b46 !important;
+}
+
+table.scrum-stats-table tbody tr:nth-child(2n+1) {
+  background: #222 !important;
+}
+
+table.scrum-stats-table tbody tr td.total {
+  font-weight: bold !important;
+  color: #B8860B !important;
+}
+
+table.scrum-stats-table tbody tr td.comment {
+  font-style: italic !important;
+  color: #999 !important;
+  font-size: 80% !important;
+}
+
+table.scrum-stats-chart-table {
+  width: 90% !important;
+  margin-left: 5% !important;
+  margin-right: 5% !important;
+  border-collapse: collapse !important;
+}
+
+/* Scrum menu styling */
+.scrum-menu a {
+  margin-left: 1em !important;
+  color: #B8860B !important;
+}
+
+.scrum-menu a:hover {
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+/* Scrum content containers */
+.scrum-content {
+  position: relative !important;
+  background-color: #222 !important;
+  padding: 10px !important;
+  border-radius: 5px !important;
+}
+
+.scrum-content-fullscreen {
+  background-color: #222 !important;
+  z-index: 50 !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: fixed !important;
+  top: 0px !important;
+  right: 0px !important;
+  overflow: auto !important;
+}
+
+.scrum-contextual {
+  position: absolute !important;
+  top: 0px !important;
+  right: 0px !important;
+}
+
+/* Fullscreen toggle buttons */
+.scrum-content .icon-normal-screen {
+  display: none !important;
+}
+
+.scrum-content-fullscreen .icon-normal-screen {
+  display: inline !important;
+  margin-top: 5px !important;
+  margin-right: 10px !important;
+}
+
+.scrum-content .icon-fullscreen {
+  display: inline !important;
+  margin-top: -5px !important;
+}
+
+.scrum-content-fullscreen .icon-fullscreen {
+  display: none !important;
+}
+
+/* Sprint board drag handle */
+.sprint-board-pbi-handle {
+  background-image: url(../../../images/reorder.png) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  min-width: 16px !important;
+}
+
+/* Dialog styling for help */
+.ui-dialog.ui-widget-content {
+  background-color: #222 !important;
+  border-color: #444 !important;
+  color: #e1e1e1 !important;
+}
+
+.ui-dialog .ui-dialog-titlebar {
+  background-color: #333 !important;
+  border-color: #444 !important;
+  color: #e1e1e1 !important;
+}
+
+.ui-dialog .ui-dialog-content {
+  background-color: #222 !important;
+  color: #e1e1e1 !important;
+}
+
+/* Sprint header styling */
+.sprint-header {
+  background-color: #222 !important;
+  color: #e1e1e1 !important;
+  padding: 5px !important;
+  border-bottom: 1px solid #444 !important;
+  margin-bottom: 10px !important;
+}
+
+/* Calendar button for date inputs */
+.ui-datepicker-trigger {
+  filter: brightness(1.3) contrast(1.2) !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Settings post-it styling */
+.settings-post-it {
+  margin-right: 15px !important;
+  white-space: nowrap !important;
+  padding: 2px !important;
+  padding-right: 9px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Improve visibility of links within post-its */
+.post-it a, .post-it a:link, .post-it a:visited {
+  color: #444 !important;
+  font-weight: bold !important;
+  text-decoration: none !important;
+}
+
+.post-it a:hover {
+  color: #000 !important;
+  text-decoration: underline !important;
+}
+
+/* General context menu styling */
+.contextual {
+  background-color: #222 !important;
+  padding: 5px !important;
+  border-radius: 3px !important;
+}
+
+/* Task status column stylings */
+#pbi_status_1, #pbi_status_11, #pbi_status_16, #pbi_status_13, #pbi_status_9 {
+  background-color: #222 !important;
+  border-color: #444 !important;
+}
+
+/* Sprint board header styling */
+/* .sprint-board th {
+  background-color: #333 !important;
+  color: #e1e1e1 !important;
+  font-weight: bold !important;
+} */
+
+/* Gantt chart subject hover */
+.gantt_subjects div.issue-subject:hover {
+  background-color: #2a3b46 !important;
+}
+
+/* FIX FOR ADMIN MENU ICON DISPLAY */
+#admin-menu li a.information,
+#admin-menu li a.plugins,
+#admin-menu li a.ldap-sync {
+  /* Reset any filter that might be affecting the icon */
+  filter: none !important;
+  /* Ensure correct icon display */
+  display: inline-block !important;
+  background-position: 0 50% !important;
+  padding-left: 20px !important;
+  /* color: #e1e1e1 !important; */
+}
+
+/* Fix icon coloring in admin menu */
+#admin-menu .icon,
+#admin-menu .icon-plugins,
+#admin-menu .icon-information,
+#admin-menu .icon-ldap {
+  /* Adjust icon brightness for better visibility */
+  filter: brightness(1.5) !important;
+  /* Ensure correct background position and display */
+  background-position: 0 50% !important;
+  padding-left: 20px !important;
+}
+
+/* Ensure admin menu items have correct spacing */
+#admin-menu li {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#admin-menu li a {
+  padding: 6px 10px 6px 20px !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+/* Fix hover effects for admin menu */
+#admin-menu li a:hover {
+  background-color: #333 !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+/* Override any conflicting filter styles specifically for admin menu */
+#top-menu ul li a,
+#admin-menu li a {
+  filter: none !important;
+}
+
+/* Restore original icon appearance */
+#top-menu .icon,
+#admin-menu .icon {
+  background-repeat: no-repeat !important;
+  padding-left: 20px !important;
+}

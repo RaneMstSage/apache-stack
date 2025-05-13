@@ -1,0 +1,327 @@
+/**********************************************************/
+/* XCHART STYLING FOR SAGEDARK THEME */
+/**********************************************************/
+
+.xchart .line {
+    stroke-width: 3px !important;
+    fill: none !important;
+  }
+  
+  .xchart .fill {
+    stroke-width: 0 !important;
+    opacity: 0.6 !important;
+  }
+  
+  .xchart circle {
+    stroke: #333 !important;
+    stroke-width: 3px !important;
+    r: 5px !important; /* Default radius */
+  }
+  
+  .xchart circle:hover {
+    r: 7px !important;
+    stroke-width: 4px !important;
+  }
+  
+  .xchart .axis .domain {
+    fill: none !important;
+    stroke: #555 !important;
+    stroke-width: 1.5px !important;
+  }
+  
+  .xchart .axis .tick line {
+    stroke: #444 !important;
+    stroke-width: 1px !important;
+    stroke-dasharray: 2,2 !important; /* Dotted grid lines */
+  }
+  
+  .xchart .axis text {
+    font-family: Helvetica, Arial, Verdana, sans-serif !important;
+    fill: #e1e1e1 !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+  }
+  
+  /* Color scheme adjusted to match SageDark amber theme */
+  .xchart .color0 .line {
+    stroke: #B8860B !important;
+  }
+  
+  .xchart .color0 .line .fill {
+    pointer-events: none !important;
+  }
+  
+  .xchart .color0 rect,
+  .xchart .color0 circle {
+    fill: #B8860B !important;
+  }
+  
+  .xchart .color0 .fill {
+    fill: none !important;
+  }
+  
+  .xchart .color0.comp .line {
+    stroke: rgba(184, 134, 11, 0.7) !important;
+    stroke-dasharray: 5,3 !important;
+    stroke-width: 2.5px !important;
+  }
+  
+  .xchart .color0.comp rect {
+    fill: rgba(184, 134, 11, 0.7) !important;
+  }
+  
+  .xchart .color0.comp .fill {
+    display: none !important;
+  }
+  
+  .xchart .color0.comp circle,
+  .xchart .color0.comp .pointer {
+    fill: rgba(184, 134, 11, 0.7) !important;
+  }
+  
+  .xchart .color1 .line {
+    stroke: #A67B54 !important;
+  }
+  
+  .xchart .color1 .line .fill {
+    pointer-events: none !important;
+  }
+  
+  .xchart .color1 rect,
+  .xchart .color1 circle {
+    fill: #A67B54 !important;
+  }
+  
+  .xchart .color1 .fill {
+    fill: none !important;
+  }
+  
+  .xchart .color1.comp .line {
+    stroke: rgba(166, 123, 84, 0.7) !important;
+    stroke-dasharray: 5,3 !important;
+    stroke-width: 2.5px !important;
+  }
+  
+  .xchart .color1.comp rect {
+    fill: rgba(166, 123, 84, 0.7) !important;
+  }
+  
+  .xchart .color1.comp .fill {
+    display: none !important;
+  }
+  
+  .xchart .color1.comp circle,
+  .xchart .color1.comp .pointer {
+    fill: rgba(166, 123, 84, 0.7) !important;
+  }
+  
+  .xchart .color2 .line {
+    stroke: #D4A76A !important;
+  }
+  
+  .xchart .color2 .line .fill {
+    pointer-events: none !important;
+  }
+  
+  .xchart .color2 rect,
+  .xchart .color2 circle {
+    fill: #D4A76A !important;
+  }
+  
+  .xchart .color2 .fill {
+    fill: none !important;
+  }
+  
+  .xchart .color2.comp .line {
+    stroke: rgba(212, 167, 106, 0.7) !important;
+    stroke-dasharray: 5,3 !important;
+    stroke-width: 2.5px !important;
+  }
+  
+  .xchart .color2.comp rect {
+    fill: rgba(212, 167, 106, 0.7) !important;
+  }
+  
+  .xchart .color2.comp .fill {
+    display: none !important;
+  }
+  
+  .xchart .color2.comp circle,
+  .xchart .color2.comp .pointer {
+    fill: rgba(212, 167, 106, 0.7) !important;
+  }
+  
+  .xchart .color3 .line {
+    stroke: #8B6914 !important;
+  }
+  
+  .xchart .color3 .line .fill {
+    pointer-events: none !important;
+  }
+  
+  .xchart .color3 rect,
+  .xchart .color3 circle {
+    fill: #8B6914 !important;
+  }
+  
+  .xchart .color3 .fill {
+    fill: none !important;
+  }
+  
+  .xchart .color3.comp .line {
+    stroke: rgba(139, 105, 20, 0.7) !important;
+    stroke-dasharray: 5,3 !important;
+    stroke-width: 2.5px !important;
+  }
+  
+  .xchart .color3.comp rect {
+    fill: rgba(139, 105, 20, 0.7) !important;
+  }
+  
+  .xchart .color3.comp .fill {
+    display: none !important;
+  }
+  
+  .xchart .color3.comp circle,
+  .xchart .color3.comp .pointer {
+    fill: rgba(139, 105, 20, 0.7) !important;
+  }
+  
+  .xchart .color4 .line {
+    stroke: #C8A780 !important;
+  }
+  
+  .xchart .color4 .line .fill {
+    pointer-events: none !important;
+  }
+  
+  .xchart .color4 rect,
+  .xchart .color4 circle {
+    fill: #C8A780 !important;
+  }
+  
+  .xchart .color4 .fill {
+    fill: none !important;
+  }
+  
+  .xchart .color4.comp .line {
+    stroke: rgba(200, 167, 128, 0.7) !important;
+    stroke-dasharray: 5,3 !important;
+    stroke-width: 2.5px !important;
+  }
+  
+  .xchart .color4.comp rect {
+    fill: rgba(200, 167, 128, 0.7) !important;
+  }
+  
+  .xchart .color4.comp .fill {
+    display: none !important;
+  }
+  
+  .xchart .color4.comp circle,
+  .xchart .color4.comp .pointer {
+    fill: rgba(200, 167, 128, 0.7) !important;
+  }
+  
+  /* Continue with the rest of colors in the same amber/gold theme */
+  .xchart .color5 .line {
+    stroke: #B89F65 !important;
+  }
+  
+  .xchart .color5 rect,
+  .xchart .color5 circle {
+    fill: #B89F65 !important;
+  }
+  
+  .xchart .color6 .line {
+    stroke: #AA955F !important;
+  }
+  
+  .xchart .color6 rect,
+  .xchart .color6 circle {
+    fill: #AA955F !important;
+  }
+  
+  .xchart .color7 .line {
+    stroke: #A78B4A !important;
+  }
+  
+  .xchart .color7 rect,
+  .xchart .color7 circle {
+    fill: #A78B4A !important;
+  }
+  
+  .xchart .color8 .line {
+    stroke: #9A813E !important;
+  }
+  
+  .xchart .color8 rect,
+  .xchart .color8 circle {
+    fill: #9A813E !important;
+  }
+  
+  .xchart .color9 .line {
+    stroke: #8B7632 !important;
+  }
+  
+  .xchart .color9 rect,
+  .xchart .color9 circle {
+    fill: #8B7632 !important;
+  }
+  
+  /* Chart title styling */
+  .xchart-title {
+    color: #B8860B !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    margin-bottom: 10px !important;
+  }
+  
+  /* Chart tooltip */
+  .xchart-tooltip {
+    background-color: rgba(34, 34, 34, 0.9) !important;
+    color: #e1e1e1 !important;
+    border: 1px solid #555 !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    font-size: 12px !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) !important;
+    z-index: 1000 !important;
+  }
+  
+  .xchart-tooltip .title {
+    color: #B8860B !important;
+    font-weight: bold !important;
+    margin-bottom: 5px !important;
+    border-bottom: 1px solid #444 !important;
+    padding-bottom: 3px !important;
+  }
+  
+  /* Additional color variants */
+  .xchart .color10 .line {
+    stroke: #C09C5A !important;
+  }
+  
+  .xchart .color10 rect,
+  .xchart .color10 circle {
+    fill: #C09C5A !important;
+  }
+  
+  .xchart .color11 .line {
+    stroke: #D9B775 !important;
+  }
+  
+  .xchart .color11 rect,
+  .xchart .color11 circle {
+    fill: #D9B775 !important;
+  }
+  
+  .xchart .color12 .line {
+    stroke: #977C3E !important;
+  }
+  
+  .xchart .color12 rect,
+  .xchart .color12 circle {
+    fill: #977C3E !important;
+  }

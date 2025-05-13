@@ -1,32 +1,38 @@
 services:
-  # Initial setup services - uncomment to bootstrap configuration
-  # apache-init:
-  #   build:
-  #     context: ./apache
-  #     dockerfile: Dockerfile
-  #   container_name: apache-init
-  #   command: >
-  #     bash -c "
-  #       mkdir -p /mnt/conf /mnt/htdocs &&
-  #       cp -r /usr/local/apache2/conf/* /mnt/conf 2>/dev/null || true &&
-  #       cp -r /usr/local/apache2/htdocs/* /mnt/htdocs 2>/dev/null || true"
-  #   volumes:
-  #     - ${DOCKER_VOLUMES_BASE}/conf:/mnt/conf
-  #     - ${DOCKER_VOLUMES_BASE}/htdocs:/mnt/htdocs
-  #   entrypoint: ""
-
-  # php-init:
-  #   build:
-  #     context: ./php
-  #     dockerfile: Dockerfile
-  #   container_name: php-init
-  #   command: >
-  #     bash -c "
-  #       mkdir -p /mnt/php-conf &&
-  #       cp /usr/local/etc/php/php.ini-production /mnt/php-conf/php.ini 2>/dev/null || true"
-  #   volumes:
-  #     - ${DOCKER_VOLUMES_BASE}/php:/mnt/php-conf
-  #   entrypoint: ""
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+      - "${LDAP_PORT}:389"
+      - "${LDAPS_PORT}:636"
+    volumes:
+      - ${DOCKER_VOLUMES_BASE}/nginx/stream.conf:/etc/nginx/stream.conf:ro
+      - ${DOCKER_VOLUMES_BASE}/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${DOCKER_VOLUMES_BASE}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${DOCKER_VOLUMES_BASE}/nginx/ssl:/etc/nginx/ssl:ro
+      - ${DOCKER_VOLUMES_BASE}/nginx/logs:/var/log/nginx
+      # Static files cache directory
+      - ${DOCKER_VOLUMES_BASE}/nginx/cache:/var/cache/nginx
+      # Certbot-related volumes for Let's Encrypt - allow nginx to read certificates
+      - ${DOCKER_VOLUMES_BASE}/certbot/conf:/etc/letsencrypt:ro
+      - ${DOCKER_VOLUMES_BASE}/certbot/www:/var/www/certbot:ro
+      - ${DOCKER_VOLUMES_BASE}/nginx/502.html:/etc/nginx/502.html:ro
+    networks:
+      - apache-network
+    depends_on:
+      - apache
+      - redmine
+      - php
+    restart: unless-stopped
+    # Add healthcheck for more robust operation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   apache:
     build:
@@ -34,8 +40,8 @@ services:
       dockerfile: Dockerfile
     container_name: apache
     ports:
-      - "${APACHE_HTTP_PORT}:80"
-      - "${APACHE_HTTPS_PORT}:443"
+       - "${APACHE_HTTP_PORT}:80"
+       - "${APACHE_HTTPS_PORT}:443"
     volumes:
       - ${DOCKER_VOLUMES_BASE}/conf:/usr/local/apache2/conf
       - ${DOCKER_VOLUMES_BASE}/htdocs:/usr/local/apache2/htdocs
@@ -50,6 +56,13 @@ services:
       - apache-network
     depends_on:
       - php
+    # Add healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/server-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   php:
     build:
@@ -66,6 +79,12 @@ services:
     restart: unless-stopped
     networks:
       - apache-network
+    # Add healthcheck for PHP-FPM
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mysql:
     container_name: mysql
@@ -77,10 +96,18 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "${MYSQL_PORT}:3306"
+    expose:
+      - "3306"
     networks:
       - apache-network
+    restart: unless-stopped
+    # Add healthcheck for MySQL
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   redmine:
     container_name: redmine
@@ -88,8 +115,8 @@ services:
       context: ./redmine
       dockerfile: Dockerfile
     restart: always
-    ports:
-      - "${REDMINE_PORT}:3000"
+    expose:
+      - "3000"
     environment:
       REDMINE_DB_MYSQL: mysql
       REDMINE_DB_DATABASE: ${REDMINE_DB_DATABASE}
@@ -108,13 +135,17 @@ services:
     depends_on:
       - mysql
     command: ["rails", "server", "-e", "production", "-p", "3000", "-b", "0.0.0.0"]
+    # Add healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
 
   openldap:
     image: osixia/openldap:latest
     container_name: openldap
-    ports:
-      - "${LDAP_PORT}:389"
-      - "${LDAPS_PORT}:636"
     environment:
       LDAP_ORGANISATION: ${LDAP_ORGANISATION}
       LDAP_DOMAIN: ${LDAP_DOMAIN}
@@ -124,6 +155,32 @@ services:
       - ldap_config:/etc/ldap/slapd.d
     networks:
       - apache-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=example,dc=org", "-D", "cn=admin,dc=example,dc=org", "-w", "${LDAP_ADMIN_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Certbot service for SSL certificate management - Updated based on Let's Encrypt with Docker best practices
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      # These need to be writable by certbot
+      - ${DOCKER_VOLUMES_BASE}/certbot/conf:/etc/letsencrypt:rw
+      - ${DOCKER_VOLUMES_BASE}/certbot/www:/var/www/certbot:rw
+      - ${DOCKER_VOLUMES_BASE}/certbot/logs:/var/log/letsencrypt:rw
+    networks:
+      - apache-network
+    # Use 'certonly' command with webroot authentication
+    # This is more reliable than the auto-renewal script
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
+    # Add dependency on nginx since we're using webroot authentication
+    depends_on:
+      - nginx
+    restart: unless-stopped
 
 networks:
   apache-network:

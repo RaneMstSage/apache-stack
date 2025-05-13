@@ -1,403 +1,276 @@
-# Apache Stack: Build from Source using Docker
+# Apache Stack with Nginx Reverse Proxy
 
-This repository builds Apache HTTPD 2.4.63 from source using a Dockerfile based on a clean Debian image. It mirrors the build process described [here](https://www.apachelounge.com/viewtopic.php?t=8609) (originally Windows-focused), adapted for full Linux containerization with extensible module control.
-
----
+This repository builds a comprehensive web application stack with Apache HTTPD 2.4.63 from source, with Nginx serving as a reverse proxy. The stack provides a unified entry point for all services while maintaining direct access capabilities for development and debugging.
 
 ## 🔧 Requirements
 - Docker
 - Docker Compose v2+
+- Domain name(s) for SSL certificates (optional for development)
 
----
+## ✨ New Features
+- ✅ Nginx reverse proxy providing a unified entry point
+- ✅ Automatic SSL certificate management with Let's Encrypt
+- ✅ HTTP/2 support for improved performance
+- ✅ LDAP proxying for centralized authentication
+- ✅ Hostname-based routing to different services
+- ✅ Optimized caching for static assets
+- ✅ Enhanced security with proper headers and timeouts
 
-## 📆 Stack Features
-- ✅ Apache HTTPD built 100% from source
-- ✅ mod_fcgid built separately from source
-- ✅ HTTP/2, Brotli, SSL (OpenSSL 3.x), DAV, Lua
-- ✅ WebDAV support with configurable `DavLockDB`
-- ✅ mod_lua with `LuaMapHandler` working
-- ✅ Python integration via mod_wsgi with virtual environment
-- ✅ Full Subversion 1.14.5 integration with all language bindings (Python, Perl, Ruby, Java)
-- ✅ Git integration with HTTP backend for repository access
-- ✅ PHP 8.2-FPM with optimized extensions
-- ✅ MySQL 8.0 database with persistent storage
-- ✅ Redmine 6.0.5 with custom SageDark theme
-- 🧱 Full control over modules (compiled via `--enable-*` flags)
+## 🏗️ Architecture Overview
 
----
+```
+   External Clients
+         │
+         ▼
+      [Nginx]   ← Let's Encrypt Certificates
+         │
+         ├─────────┬──────────┬──────────┐
+         │         │          │          │
+         ▼         ▼          ▼          ▼
+   [Apache]    [Redmine]   [LDAP]    [Other Services]
+      │ │
+      │ └────────────────┐
+      │                  │
+      ▼                  ▼
+ [PHP-FPM]       [Git/SVN/Python/Lua]
+```
 
-## 🎨 SageDark Theme
-Our custom dark theme for Redmine provides a comprehensive dark mode experience:
+Nginx serves as the entrypoint, routing requests to the appropriate backend service based on hostname or URL path. Apache continues to host PHP applications, Git/SVN repositories, and more.
 
-### Features
-- Dark background with amber/gold accents, now using #116699 for links
-- Enhanced styling for Scrum/Agile plugin with proper spacing between menu icons
-- Custom styling for NVD3 and XChart visualizations
-- Post-it notes with appropriate contrast in dark mode
-- Consistent color scheme throughout the interface
+## 📋 Setup Guide
 
-The theme provides better readability in low-light environments while maintaining professional aesthetics.
+### 1. Directory Structure Setup
 
----
+Create the necessary directory structure:
 
-## 🛡️ Setup
-On first use, copy in default `conf` and `htdocs` folders or use pre-distributed versions.
-
-If you still want to bootstrap with Apache's defaults:
-
-### (Optional) Apache Init Workflow:
-Uncomment the `apache-init` block in `docker-compose.yml` and run:
 ```bash
-docker compose up -d ; sleep 10 ; docker compose down
+# Set your volumes base directory (update this to your preferred location)
+export DOCKER_VOLUMES_BASE="/path/to/your/volumes/apache-stack"
+
+# Create Nginx directories
+mkdir -p ${DOCKER_VOLUMES_BASE}/nginx/{conf.d,ssl,logs,cache,error_pages}
+
+# Create Certbot directories for Let's Encrypt
+mkdir -p ${DOCKER_VOLUMES_BASE}/certbot/{conf,www,logs}
+
+# Set proper permissions
+chmod -R 755 ${DOCKER_VOLUMES_BASE}/nginx
+chmod -R 755 ${DOCKER_VOLUMES_BASE}/certbot
 ```
 
-Then fix permissions:
+### 2. Configuration Files
+
+Copy the default Nginx configuration files from the `config-templates/nginx` directory:
+
 ```bash
-sudo chmod -R a+rwx ~/docker-volumes/apache-stack
+# Copy all configuration files
+cp config-templates/nginx/nginx.conf ${DOCKER_VOLUMES_BASE}/nginx/
+cp config-templates/nginx/stream.conf ${DOCKER_VOLUMES_BASE}/nginx/
+cp config-templates/nginx/conf.d/* ${DOCKER_VOLUMES_BASE}/nginx/conf.d/
+cp config-templates/nginx/error_pages/* ${DOCKER_VOLUMES_BASE}/nginx/error_pages/
+
+# Create 502.html error page (or copy it from the template directory)
+cp config-templates/nginx/502.html ${DOCKER_VOLUMES_BASE}/nginx/
 ```
 
-Edit `conf/httpd.conf`:
-- Set `ServerName localhost`
+### 3. SSL Certificate Setup
 
-Re-comment `apache-init`, then start:
+For development environments, create a self-signed certificate:
+
 ```bash
-docker compose up -d
+# Generate a self-signed certificate
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.key \
+  -out ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.crt \
+  -subj "/CN=localhost"
+
+# Set proper permissions
+chmod 600 ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.key
+chmod 644 ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.crt
 ```
 
----
+### 4. Setup Docker Environment
 
-## 📂 Directory Layout
-```
-apache-stack/
-├── apache/                 # Dockerfile and source build context
-├── php/                    # PHP-FPM Dockerfile and configuration
-├── redmine/                # Redmine Dockerfile and customizations
-├── docker-volumes/         # Host directory bind mounts
-│   ├── conf/               # Mounted to /usr/local/apache2/conf
-│   │   └── extra/          # Additional configuration files
-│   │       ├── httpd-git.conf       # Git integration
-│   │       ├── httpd-lua.conf       # Lua configuration
-│   │       ├── httpd-php-fcgi.conf  # PHP-FPM integration
-│   │       ├── httpd-python.conf    # Python WSGI integration
-│   │       └── httpd-svn.conf       # Subversion integration
-│   ├── htdocs/             # Mounted to /usr/local/apache2/htdocs
-│   ├── uploads/            # Mounted to /usr/local/apache2/uploads (DAV)
-│   ├── var/                # Mounted to /usr/local/apache2/var (for DavLockDB)
-│   ├── python-apps/        # Mounted to /usr/local/apache2/python-apps
-│   ├── php/                # PHP configuration files
-│   ├── redmine/            # Redmine files and themes
-│   │   ├── files/          # Redmine file attachments
-│   │   ├── plugins/        # Redmine plugins (incl. Scrum/Agile)
-│   │   ├── config/         # Redmine configuration
-│   │   └── themes/         # Redmine themes (incl. SageDark)
-│   └── user.passwd         # Auth file for SVN and Git
-├── docker-compose.yml      # Defines services and volumes
-└── .gitignore
-```
+Create or modify your `.env` file to include the following variables:
 
-## Docker Volumes
-```
-svn_repos               # Docker volume for SVN repositories
-git_repos               # Docker volume for Git repositories
-mysql_data              # Docker volume for MySQL data
-```
-
-The SVN and Git repositories are stored in Docker volumes for better performance, especially when running in WSL environments. These volumes are managed by Docker rather than being bind-mounted from the host filesystem.
-
----
-
-## 🧪 Test Your Stack
-Once the container is running, visit:
-- `http://localhost:8080/index.html` — Static HTML/CSS/JS test
-- `http://localhost:8080/lua/info` — mod_lua test (see `luainfo.lua`)
-- `http://localhost:8080/python` — Python WSGI application test
-- `http://localhost:8080/svn` — Subversion repository browser
-- `http://localhost:8080/git` — Git repositories access
-- `http://localhost:3000/` — Redmine with SageDark theme
-- `http://localhost:3001/` — Secondary Redmine 5.1 instance
-- `curl --digest -u admin:yourpassword -T test.txt http://localhost:8080/uploads/test.txt` — WebDAV upload test (with auth)
-
-Ensure these directories exist and are writable:
 ```bash
-# For WebDAV - just ensure correct permissions
-sudo chown -R daemon:daemon ~/docker-volumes/apache-stack/uploads
-sudo chown -R daemon:daemon ~/docker-volumes/apache-stack/var
-chmod -R 775 ~/docker-volumes/apache-stack/uploads
-chmod -R 775 ~/docker-volumes/apache-stack/var
+# Nginx ports
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+
+# LDAP ports (proxied through Nginx)
+LDAP_PORT=389
+LDAPS_PORT=636
+
+# Apache ports (for direct access)
+APACHE_HTTP_PORT=8080
+APACHE_HTTPS_PORT=8443
+
+# MySQL settings
+MYSQL_ROOT_PASSWORD=your_secure_password
+MYSQL_DATABASE=apache_stack
+MYSQL_USER=apache_user
+MYSQL_PASSWORD=apache_password
+
+# Redmine database settings
+REDMINE_DB_DATABASE=redmine
+REDMINE_DB_USERNAME=redmine
+REDMINE_DB_PASSWORD=redmine_password
+REDMINE_SECRET_KEY_BASE=generate_a_secret_key_here
+
+# LDAP settings
+LDAP_ORGANISATION="Your Company"
+LDAP_DOMAIN="example.org"
+LDAP_ADMIN_PASSWORD=ldap_admin_password
+
+# Base directory for volume mappings
+DOCKER_VOLUMES_BASE=/path/to/your/volumes/apache-stack
 ```
 
-To create your auth password file:
+### 5. Start the Stack
+
 ```bash
-# For basic authentication (SVN and Git)
-htpasswd -c ~/docker-volumes/apache-stack/user.passwd username
+# Start the stack
+docker-compose up -d
 
-# For digest authentication (WebDAV)
-htdigest -c ~/docker-volumes/apache-stack/user.passwd DAV-upload admin
+# Verify that all services are running
+docker-compose ps
 ```
 
----
+### 6. Obtain SSL Certificates (For Production)
 
-## 📝 Notes
+For production environments with a real domain:
 
-### WebDAV Configuration
-- Apache must load the following modules:
-  ```apache
-  LoadModule dav_module modules/mod_dav.so
-  LoadModule dav_fs_module modules/mod_dav_fs.so
-  LoadModule dav_lock_module modules/mod_dav_lock.so
-  LoadModule auth_digest_module modules/mod_auth_digest.so
-  ```
-- Sample config for DAV + digest auth:
-  ```apache
-  DavLockDB "/usr/local/apache2/var/DavLock"
-  Alias /uploads "/usr/local/apache2/uploads"
-  <Directory "/usr/local/apache2/uploads">
-      Dav On
-      AuthType Digest
-      AuthName "DAV-upload"
-      AuthUserFile "/usr/local/apache2/user.passwd"
-      AuthDigestProvider file
-      <RequireAny>
-          Require method GET POST OPTIONS
-          Require user admin
-      </RequireAny>
-  </Directory>
-  ```
-
-### MySQL Configuration
-The stack includes a MySQL 8.0 database server with the following features:
-- Persistent data storage via Docker volume
-- Environment variable configuration for security
-- Separate databases for multiple Redmine instances
-- Shared network with Apache and PHP services
-
-```yaml
-mysql:
-  container_name: mysql
-  image: mysql:8.0
-  volumes:
-    - mysql_data:/var/lib/mysql
-  environment:
-    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    MYSQL_DATABASE: ${MYSQL_DATABASE}
-    MYSQL_USER: ${MYSQL_USER}
-    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-  ports:
-    - "3306:3306"
-  networks:
-    - apache-network
-```
-
-To connect to the MySQL database:
 ```bash
-docker exec -it mysql mysql -u root -p
+# Replace example.com with your actual domain name
+docker-compose run --rm certbot certonly --webroot -w /var/www/certbot \
+  -d example.com -d www.example.com \
+  --email admin@example.com --agree-tos --no-eff-email
+
+# Reload Nginx to apply the new certificates
+docker-compose exec nginx nginx -s reload
 ```
 
-### PHP Configuration
-The PHP container uses PHP 8.2-FPM with the following optimizations:
-```Dockerfile
-FROM php:8.2-fpm
+After obtaining certificates, update your Nginx configuration to use them:
 
-# Install common PHP extensions
-RUN apt-get update && apt-get install -y \
-        libfreetype6-dev \
-        libjpeg62-turbo-dev \
-        libpng-dev \
-        libzip-dev \
-        libxml2-dev \
-        libonig-dev \
-    && docker-php-ext-install -j$(nproc) \
-        gd \
-        mysqli \
-        pdo_mysql \
-        zip \
-        opcache \
-        mbstring \
-        xml
-
-# Set recommended PHP.ini settings
-RUN { \
-        echo 'opcache.memory_consumption=128'; \
-        echo 'opcache.interned_strings_buffer=8'; \
-        echo 'opcache.max_accelerated_files=4000'; \
-        echo 'opcache.revalidate_freq=2'; \
-        echo 'opcache.fast_shutdown=1'; \
-        echo 'opcache.enable_cli=1'; \
-    } > /usr/local/etc/php/conf.d/opcache-recommended.ini
-
-WORKDIR /var/www/html
-```
-
-To integrate PHP with Apache, we use this configuration (`conf/extra/httpd-php-fcgi.conf`):
-```apache
-# Enable PHP file handling via FPM/FastCGI
-<FilesMatch \.php$>
-    SetHandler "proxy:fcgi://php:9000"
-</FilesMatch>
-
-# Set up .php file support
-<IfModule dir_module>
-    DirectoryIndex index.php index.html
-</IfModule>
-
-# Application settings
-AddType application/x-httpd-php .php
-AddType application/x-httpd-php-source .phps
-```
-
-### Python WSGI Configuration
-The stack includes mod_wsgi for running Python applications. The configuration (`conf/extra/httpd-python.conf`):
-```apache
-# Python WSGI Configuration
-LoadModule wsgi_module modules/mod_wsgi.so
-
-<IfModule wsgi_module>
-    # Point to the virtual environment instead of system Python
-    WSGIPythonHome /usr/local/apache2/python-env
-    WSGIPythonPath /usr/local/apache2/python-apps
-    
-    <Directory /usr/local/apache2/python-apps>
-        Options ExecCGI
-        Require all granted
-    </Directory>
-
-    WSGIScriptAlias /python /usr/local/apache2/python-apps/app.wsgi
-</IfModule>
-```
-
-### Lua Configuration
-To enable `mod_lua`, we use this configuration (`conf/extra/httpd-lua.conf`):
-```apache
-<IfModule lua_module>
-    # Map /lua/info to our lua-info.lua script
-    LuaMapHandler "/lua/info" "/usr/local/apache2/htdocs/lua-info.lua"
-</IfModule>
-```
-
-### Subversion Configuration
-Our SVN integration uses this configuration (`conf/extra/httpd-svn.conf`):
-```apache
-# Load Subversion modules
-LoadModule dav_module modules/mod_dav.so
-LoadModule dav_fs_module modules/mod_dav_fs.so
-LoadModule dav_svn_module modules/mod_dav_svn.so
-LoadModule authz_svn_module modules/mod_authz_svn.so
-
-# Repository configuration
-<Location /svn>
-    DAV svn
-    SVNParentPath /usr/local/apache2/svn
-    SVNListParentPath On
-    
-    # Authentication settings
-    AuthType Basic
-    AuthName "Subversion Repository"
-    AuthUserFile /usr/local/apache2/user.passwd
-    Require valid-user
-</Location>
-```
-
-### Git Configuration
-Our Git integration uses this configuration (`conf/extra/httpd-git.conf`):
-```apache
-# Set up Git environment
-SetEnv GIT_PROJECT_ROOT /usr/local/apache2/git
-SetEnv GIT_HTTP_EXPORT_ALL
-
-# Map /git/ to the Git HTTP backend
-ScriptAlias /git/ /usr/local/apache2/cgi-bin/git-http-backend/
-
-<Directory "/usr/local/apache2/cgi-bin">
-    # Permit CGI execution
-    Options +ExecCGI
-    Require all granted
-    # For Linux, we need a different handler since there's no .exe
-    AddHandler cgi-script .cgi
-</Directory>
-
-<Location /git>
-    # Basic auth
-    AuthType Basic
-    AuthName "Git Repository"
-    AuthUserFile /usr/local/apache2/user.passwd
-    Require valid-user
-</Location>
-```
-
-### Creating Subversion Repositories
-To create a Subversion repository:
 ```bash
-docker exec -it apache svnadmin create /usr/local/apache2/svn/testrepo
-docker exec -it apache chown -R daemon:daemon /usr/local/apache2/svn/testrepo
+# Edit the SSL server blocks in your configuration to use the new certificates
+# Example path: ${DOCKER_VOLUMES_BASE}/nginx/conf.d/apache-ssl.conf
+
+# Reload Nginx after making changes
+docker-compose exec nginx nginx -s reload
 ```
 
-To checkout and use the repository:
+## 📝 Common Operations
+
+### Testing Your Setup
+
+Once the stack is running, you can access your services:
+
+- Main Apache site: `http://localhost/`
+- Direct Apache access: `http://localhost:8080/`
+- Redmine: `http://redmine.localhost/`
+- LDAP access: Configure your LDAP client to connect to `ldap://localhost:389`
+
+### Managing Data Directories
+
+The following directories contain persistent data:
+
+- Apache content: `${DOCKER_VOLUMES_BASE}/htdocs/`
+- Apache configuration: `${DOCKER_VOLUMES_BASE}/conf/`
+- Redmine files: `${DOCKER_VOLUMES_BASE}/redmine/files/`
+- Redmine configuration: `${DOCKER_VOLUMES_BASE}/redmine/config/`
+
+Make sure these directories have appropriate permissions:
+
 ```bash
-svn checkout http://localhost:8080/svn/testrepo --username username
-cd testrepo
-echo "Test file" > testfile.txt
-svn add testfile.txt
-svn commit -m "Initial commit" --username username
+# For Apache-related directories
+sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/htdocs
+sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/uploads
+sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/var
+
+# For Redmine directories
+sudo chown -R 999:999 ${DOCKER_VOLUMES_BASE}/redmine
 ```
-
-### Creating Git Repositories
-To create a Git repository:
-```bash
-# Create a bare Git repository
-docker exec -it apache bash -c "mkdir -p /usr/local/apache2/git/myrepo.git && cd /usr/local/apache2/git/myrepo.git && git init --bare && chown -R daemon:daemon /usr/local/apache2/git/myrepo.git"
-```
-
-To clone and use the repository:
-```bash
-# Clone the repository
-git clone http://localhost:8080/git/myrepo.git
-
-# Add content and push
-cd myrepo
-echo "# My Repository" > README.md
-git add README.md
-git config user.email "your.email@example.com"
-git config user.name "Your Name"
-git commit -m "Initial commit"
-git push -u origin main
-```
-
-Note: Both SVN and Git repositories use the same authentication system, so users created for SVN access can also be used for Git.
-
-### Redmine with SageDark Theme
-The Redmine instance is configured with custom styling for better dark mode experience. The SageDark theme includes custom CSS for:
-- Main Redmine interface
-- Scrum/Agile plugin with properly spaced menu items
-- NVD3 charts in dark mode
-- XChart visualizations in dark mode
-
-The theme is configured to use #116699 as the link color for better readability against the dark background.
 
 ### Checking Logs
-- Apache logs (real error logs):
-  ```bash
-  docker exec -it apache cat /usr/local/apache2/logs/error_log
-  ```
-- Redmine logs:
-  ```bash
-  docker exec -it redmine cat /usr/src/redmine/log/production.log
-  ```
-- MySQL logs:
-  ```bash
-  docker exec -it mysql bash -c "tail -f /var/log/mysql/error.log"
-  ```
 
----
+```bash
+# Nginx logs
+docker-compose exec nginx cat /var/log/nginx/error.log
+docker-compose exec nginx cat /var/log/nginx/access.log
 
-## ✅ Next Steps
-- [x] Add PHP-FPM via sidecar container (with mod_proxy_fcgi)
-- [x] Add SVN via mod_dav_svn
-- [x] Add Git integration via HTTP backend
-- [x] Add Python WSGI integration
-- [x] Add Redmine integration with custom SageDark theme
-- [x] Add MySQL database for Redmine and future applications
-- [ ] Replace Basic auth with LDAP-backed auth
-- [ ] Add Nginx reverse proxy configuration
+# Apache logs
+docker-compose exec apache cat /usr/local/apache2/logs/error_log
+
+# Certbot logs
+docker-compose exec certbot cat /var/log/letsencrypt/letsencrypt.log
+```
+
+### Certificate Renewal Testing
+
+To test certificate renewal (without actually renewing):
+
+```bash
+docker-compose run --rm certbot certonly --webroot -w /var/www/certbot \
+  -d example.com --dry-run
+```
+
+## 🛡️ Security Considerations
+
+- Ensure your `.env` file has restricted permissions: `chmod 600 .env`
+- Regularly update Docker images with `docker-compose pull` followed by a restart
+- Review Nginx logs for suspicious activity
+- Consider implementing rate limiting for authentication endpoints
+- For production, restrict direct access to Apache by configuring your firewall
+
+## 🔄 Maintenance Tasks
+
+### Restarting Services
+
+```bash
+# Restart a specific service
+docker-compose restart nginx
+
+# Restart the entire stack
+docker-compose down && docker-compose up -d
+```
+
+### Updating Configurations
+
+After modifying Nginx configuration files:
+
+```bash
+# Test the configuration
+docker-compose exec nginx nginx -t
+
+# Reload Nginx if the test is successful
+docker-compose exec nginx nginx -s reload
+```
+
+### Backing Up Data
+
+Create backups of important data:
+
+```bash
+# Back up Docker volumes
+docker run --rm -v apache-stack_svn_repos:/source:ro -v $(pwd)/backups:/backup \
+  -w /source busybox tar -czf /backup/svn_repos_$(date +%Y%m%d).tar.gz .
+
+docker run --rm -v apache-stack_git_repos:/source:ro -v $(pwd)/backups:/backup \
+  -w /source busybox tar -czf /backup/git_repos_$(date +%Y%m%d).tar.gz .
+
+# Back up MySQL databases
+docker-compose exec mysql sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --all-databases' > backups/all_databases_$(date +%Y%m%d).sql
+```
+
+## 🚀 Next Steps
+
+- [ ] Configure automatic Nginx reload when certificates are renewed
+- [ ] Implement rate limiting for sensitive endpoints
+- [ ] Add monitoring and alerting for service health
+- [ ] Configure HTTP/3 (QUIC) for even better performance
+- [ ] Implement Web Application Firewall (WAF) rules
 
 ---
 

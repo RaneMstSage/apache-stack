@@ -1,0 +1,75 @@
+/**********************************************************/
+/* DROPDOWN STYLING FOR SAGEDARK THEME */
+/**********************************************************/
+
+.dropdown {
+    position: relative !important;
+  }
+  
+  .dropbtn {
+    background-color: #B8860B !important;
+    color: white !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 5px 10px !important;
+    border-radius: 3px !important;
+  }
+  
+  .dropbtn:hover {
+    background-color: #A67B54 !important;
+  }
+  
+  .dropdown-content {
+    display: none !important;
+    position: absolute !important;
+    right: 0 !important;
+    background-color: #222 !important;
+    border: 1px solid #444 !important;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5) !important;
+    z-index: 1 !important;
+    width: 400px !important;
+    padding: 10px !important;
+    border-radius: 4px !important;
+  }
+  
+  .dropdown-content a {
+    padding: 10px !important;
+    display: block !important;
+    text-decoration: none !important;
+    color: #e1e1e1 !important;
+  }
+  
+  .dropdown-content a:hover {
+    background-color: #333 !important;
+    color: #B8860B !important;
+  }
+  
+  .dropdown:hover .dropdown-content {
+    display: block !important;
+  }
+  
+  .dropdown-content input[type="text"] {
+    padding: 5px !important;
+    box-sizing: border-box !important;
+    background-color: #333 !important;
+    border: 1px solid #444 !important;
+    color: #e1e1e1 !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .dropdown-item {
+    background-color: #333 !important;
+    padding: 10px !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    color: #e1e1e1 !important;
+    margin-bottom: 5px !important;
+    border-radius: 3px !important;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #444 !important;
+    color: #B8860B !important;
+  }
+  
