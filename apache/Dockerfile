@@ -66,10 +66,15 @@ RUN tar xzf lua-5.4.7.tar.gz && cd lua-5.4.7 \
 RUN tar xzf apr-1.7.5.tar.gz && cd apr-1.7.5 \
  && ./configure && make && make install
 
-# Build APR-UTIL with LDAP support
+# Build APR-UTIL explicitly with LDAP and crypto support
 RUN tar xzf apr-util-1.6.3.tar.gz && cd apr-util-1.6.3 \
- && ./configure --with-apr=/usr/local/apr --with-ldap \
- && make && make install
+ && ./configure \
+    --with-apr=/usr/local/apr \
+    --with-ldap=yes \
+    --with-crypto \
+    --with-openssl=/usr/local/ssl \
+ && make && make install \
+ && echo "/usr/local/apr/lib" > /etc/ld.so.conf.d/apr.conf && ldconfig
 
 # Build NGHTTP2
 RUN tar xzf nghttp2-1.64.0.tar.gz && cd nghttp2-1.64.0 \
@@ -80,11 +85,25 @@ RUN tar xzf curl-8.12.1.tar.gz && cd curl-8.12.1 \
  && ./configure --with-ssl --with-nghttp2 --with-brotli --enable-ldap --enable-ldaps --enable-unicode \
  && make && make install
 
-# Build and install Apache HTTPD
+# Build and install Apache HTTPD explicitly pointing to OpenSSL and APR
 RUN tar xzf httpd-2.4.63.tar.gz && cd httpd-2.4.63 \
- && ./configure --enable-so --enable-ssl --enable-http2 --enable-brotli --enable-lua \
-    --enable-dav --enable-dav-fs --enable-dav-lock --enable-authnz-ldap --enable-ldap \
-    --enable-mods-shared=all --with-mpm=event --with-curl=/usr/local \
+ && ./configure \
+    --enable-so \
+    --enable-ssl \
+    --enable-http2 \
+    --enable-brotli \
+    --enable-lua \
+    --enable-dav \
+    --enable-dav-fs \
+    --enable-dav-lock \
+    --enable-authnz-ldap \
+    --enable-ldap \
+    --enable-mods-shared=all \
+    --with-mpm=event \
+    --with-curl=/usr/local \
+    --with-ssl=/usr/local/ssl \
+    --with-apr=/usr/local/apr \
+    --with-apr-util=/usr/local/apr \
  && make && make install
 
 # Build mod_fcgid, explicitly providing path to apxs

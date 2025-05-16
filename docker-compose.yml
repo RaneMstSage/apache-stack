@@ -5,13 +5,11 @@ services:
     ports:
       - "${NGINX_HTTP_PORT}:80"
       - "${NGINX_HTTPS_PORT}:443"
-      - "${LDAP_PORT}:389"
-      - "${LDAPS_PORT}:636"
     volumes:
-      - ${DOCKER_VOLUMES_BASE}/nginx/stream.conf:/etc/nginx/stream.conf:ro
-      - ${DOCKER_VOLUMES_BASE}/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ${DOCKER_VOLUMES_BASE}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ${DOCKER_VOLUMES_BASE}/nginx/ssl:/etc/nginx/ssl:ro
+      # - ${DOCKER_VOLUMES_BASE}/nginx/stream.conf:/etc/nginx/stream.conf:rw
+      - ${DOCKER_VOLUMES_BASE}/nginx/conf.d:/etc/nginx/conf.d:rw
+      - ${DOCKER_VOLUMES_BASE}/nginx/nginx.conf:/etc/nginx/nginx.conf:rw
+      - ${DOCKER_VOLUMES_BASE}/nginx/ssl:/etc/nginx/ssl:rw
       - ${DOCKER_VOLUMES_BASE}/nginx/logs:/var/log/nginx
       # Static files cache directory
       - ${DOCKER_VOLUMES_BASE}/nginx/cache:/var/cache/nginx
@@ -35,9 +33,7 @@ services:
       start_period: 10s
 
   apache:
-    build:
-      context: ./apache
-      dockerfile: Dockerfile
+    image: ranemstsage/apache-stack-apache:latest
     container_name: apache
     ports:
        - "${APACHE_HTTP_PORT}:80"
@@ -49,8 +45,10 @@ services:
       - ${DOCKER_VOLUMES_BASE}/uploads:/usr/local/apache2/uploads
       - ${DOCKER_VOLUMES_BASE}/user.passwd:/usr/local/apache2/user.passwd
       - ${DOCKER_VOLUMES_BASE}/python-apps:/usr/local/apache2/python-apps
-      - svn_repos:/usr/local/apache2/svn
-      - git_repos:/usr/local/apache2/git
+      # - svn_repos:/usr/local/apache2/svn
+      # - git_repos:/usr/local/apache2/git
+      - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
+      - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
     restart: unless-stopped
     networks:
       - apache-network
@@ -65,9 +63,7 @@ services:
       start_period: 10s
 
   php:
-    build:
-      context: ./php
-      dockerfile: Dockerfile
+    image: ranemstsage/apache-stack-php:latest
     container_name: php-fpm
     volumes:
       # Match Apache's path exactly
@@ -93,11 +89,11 @@ services:
       - mysql_data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    expose:
-      - "3306"
+      MYSQL_DATABASE: ${REDMINE_DB_DATABASE}
+      MYSQL_USER: ${REDMINE_DB_USERNAME}
+      MYSQL_PASSWORD: ${REDMINE_DB_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
     networks:
       - apache-network
     restart: unless-stopped
@@ -111,12 +107,10 @@ services:
 
   redmine:
     container_name: redmine
-    build:
-      context: ./redmine
-      dockerfile: Dockerfile
+    image: ranemstsage/apache-stack-redmine:latest
     restart: always
-    expose:
-      - "3000"
+    ports:
+      - "${REDMINE_PORT}:3000"
     environment:
       REDMINE_DB_MYSQL: mysql
       REDMINE_DB_DATABASE: ${REDMINE_DB_DATABASE}
@@ -128,8 +122,10 @@ services:
       - ${DOCKER_VOLUMES_BASE}/redmine/plugins:/usr/src/redmine/plugins
       - ${DOCKER_VOLUMES_BASE}/redmine/config:/usr/src/redmine/config
       - ${DOCKER_VOLUMES_BASE}/redmine/themes:/usr/src/redmine/themes
-      - svn_repos:/usr/src/redmine/svn
-      - git_repos:/usr/src/redmine/git
+      # - svn_repos:/usr/src/redmine/svn
+      # - git_repos:/usr/src/redmine/git
+      - ${WSL_SVN_REPOS_PATH}:/usr/src/redmine/svn
+      - ${WSL_GIT_REPOS_PATH}:/usr/src/redmine/git
     networks:
       - apache-network
     depends_on:
@@ -146,6 +142,9 @@ services:
   openldap:
     image: osixia/openldap:latest
     container_name: openldap
+    ports:
+      - "${LDAP_PORT}:389"
+      - "${LDAPS_PORT}:636"
     environment:
       LDAP_ORGANISATION: ${LDAP_ORGANISATION}
       LDAP_DOMAIN: ${LDAP_DOMAIN}
@@ -181,14 +180,13 @@ services:
     depends_on:
       - nginx
     restart: unless-stopped
-
 networks:
   apache-network:
     driver: bridge
 
 volumes:
-  svn_repos:
-  git_repos:
+  # svn_repos:
+  # git_repos:
   mysql_data:
   ldap_data:
   ldap_config:
