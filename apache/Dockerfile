@@ -8,6 +8,7 @@ RUN apt update && apt install -y \
     sqlite3 libsqlite3-dev libutf8proc-dev libserf-dev uuid-dev liblz4-dev \
     default-jdk libperl-dev ruby ruby-dev \
     git \
+    python3-requests \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
