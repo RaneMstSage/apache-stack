@@ -22,8 +22,8 @@ RUN wget https://zlib.net/zlib-1.3.1.tar.gz \
  && wget https://github.com/akheron/jansson/releases/download/v2.14/jansson-2.14.tar.gz \
  && wget https://github.com/google/brotli/archive/refs/tags/v1.1.0.tar.gz -O brotli-1.1.0.tar.gz \
  && wget https://www.lua.org/ftp/lua-5.4.7.tar.gz \
- && wget https://downloads.apache.org/apr/apr-1.7.5.tar.gz \
- && wget https://downloads.apache.org/apr/apr-util-1.6.3.tar.gz \
+ && wget https://archive.apache.org/dist/apr/apr-1.7.5.tar.gz \
+ && wget https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz \
  && wget https://github.com/nghttp2/nghttp2/releases/download/v1.64.0/nghttp2-1.64.0.tar.gz \
  && wget https://curl.se/download/curl-8.12.1.tar.gz \
  && wget https://downloads.apache.org/httpd/httpd-2.4.63.tar.gz \
