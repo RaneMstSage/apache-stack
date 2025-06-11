@@ -32,6 +32,42 @@ services:
       retries: 3
       start_period: 10s
 
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+       - "${SEARXNG_HTTP_PORT}:8080"
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - SEARXNG_SECRET=${SEARXNG_SECRET}
+      - SEARXNG_REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ${DOCKER_VOLUMES_BASE}/searxng/settings:/etc/searxng
+      - ${DOCKER_VOLUMES_BASE}/searxng/data:/var/lib/searxng
+      - ${DOCKER_VOLUMES_BASE}/searxng/limiter.toml:/etc/searxng/limiter.toml
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    networks: [apache-network]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: searxng-redis
+    restart: unless-stopped
+    networks:
+      - apache-network
+
   apache:
     image: ranemstsage/apache-stack-apache:latest
     container_name: apache
@@ -135,9 +171,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
+      timeout: 20s
+      retries: 5
+      start_period: 240s
 
   openldap:
     image: osixia/openldap:latest
@@ -156,7 +192,7 @@ services:
       - apache-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=example,dc=org", "-D", "cn=admin,dc=example,dc=org", "-w", "${LDAP_ADMIN_PASSWORD}"]
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=mstsage,dc=com", "-D", "cn=admin,dc=mstsage,dc=com", "-w", "${LDAP_ADMIN_PASSWORD}"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -180,6 +216,7 @@ services:
     depends_on:
       - nginx
     restart: unless-stopped
+
 networks:
   apache-network:
     driver: bridge
