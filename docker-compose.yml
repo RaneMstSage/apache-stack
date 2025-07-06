@@ -20,7 +20,9 @@ services:
     networks:
       - apache-network
     depends_on:
-      - apache
+      - apache1
+      - apache2
+      -
       - redmine
       - php
     restart: unless-stopped
