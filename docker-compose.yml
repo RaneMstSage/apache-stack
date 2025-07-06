@@ -22,7 +22,7 @@ services:
     depends_on:
       - apache1
       - apache2
-      -
+      - apache3
       - redmine
       - php
     restart: unless-stopped
