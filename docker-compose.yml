@@ -68,12 +68,72 @@ services:
     networks:
       - apache-network
 
-  apache:
+  apache1:
     image: ranemstsage/apache-stack-apache:latest
     container_name: apache
-    ports:
-       - "${APACHE_HTTP_PORT}:80"
-       - "${APACHE_HTTPS_PORT}:443"
+    # ports:
+    #    - "${APACHE_HTTP_PORT}:80"
+    #    - "${APACHE_HTTPS_PORT}:443"
+    volumes:
+      - ${DOCKER_VOLUMES_BASE}/conf:/usr/local/apache2/conf
+      - ${DOCKER_VOLUMES_BASE}/htdocs:/usr/local/apache2/htdocs
+      - ${DOCKER_VOLUMES_BASE}/var:/usr/local/apache2/var
+      - ${DOCKER_VOLUMES_BASE}/uploads:/usr/local/apache2/uploads
+      - ${DOCKER_VOLUMES_BASE}/user.passwd:/usr/local/apache2/user.passwd
+      - ${DOCKER_VOLUMES_BASE}/python-apps:/usr/local/apache2/python-apps
+      # - svn_repos:/usr/local/apache2/svn
+      # - git_repos:/usr/local/apache2/git
+      - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
+      - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
+    restart: unless-stopped
+    networks:
+      - apache-network
+    depends_on:
+      - php
+    # Add healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/server-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  apache2:
+    image: ranemstsage/apache-stack-apache:latest
+    container_name: apache
+    # ports:
+    #    - "${APACHE_HTTP_PORT}:80"
+    #    - "${APACHE_HTTPS_PORT}:443"
+    volumes:
+      - ${DOCKER_VOLUMES_BASE}/conf:/usr/local/apache2/conf
+      - ${DOCKER_VOLUMES_BASE}/htdocs:/usr/local/apache2/htdocs
+      - ${DOCKER_VOLUMES_BASE}/var:/usr/local/apache2/var
+      - ${DOCKER_VOLUMES_BASE}/uploads:/usr/local/apache2/uploads
+      - ${DOCKER_VOLUMES_BASE}/user.passwd:/usr/local/apache2/user.passwd
+      - ${DOCKER_VOLUMES_BASE}/python-apps:/usr/local/apache2/python-apps
+      # - svn_repos:/usr/local/apache2/svn
+      # - git_repos:/usr/local/apache2/git
+      - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
+      - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
+    restart: unless-stopped
+    networks:
+      - apache-network
+    depends_on:
+      - php
+    # Add healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/server-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  
+  apache3:
+    image: ranemstsage/apache-stack-apache:latest
+    container_name: apache
+    # ports:
+    #    - "${APACHE_HTTP_PORT}:80"
+    #    - "${APACHE_HTTPS_PORT}:443"
     volumes:
       - ${DOCKER_VOLUMES_BASE}/conf:/usr/local/apache2/conf
       - ${DOCKER_VOLUMES_BASE}/htdocs:/usr/local/apache2/htdocs
