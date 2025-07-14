@@ -6,8 +6,27 @@ import os
 import sys
 import subprocess
 
+def load_environment():
+    """Load environment variables from file since SSH doesn't pass Docker env vars"""
+    env_file = '/etc/ssh/ssh-router-env'
+    if os.path.exists(env_file):
+        with open(env_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('export '):
+                    line = line[7:]  # Remove 'export '
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    # Remove quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    os.environ[key] = value
+
 def proxy_to_windows():
     """Proxy SSH connection to Windows host"""
+    
+    # Load environment variables from file
+    load_environment()
     
     # Get Windows host details from environment
     windows_host = os.environ.get('WINDOWS_HOST', 'host.docker.internal')

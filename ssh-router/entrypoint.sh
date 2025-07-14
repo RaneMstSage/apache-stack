@@ -34,6 +34,15 @@ mkdir -p /etc/ssh/keys
 touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 
+# Write environment variables to a file that the scripts can read
+echo "Writing environment variables for SSH sessions..."
+cat > /etc/ssh/ssh-router-env << EOF
+export WINDOWS_USERNAME="${WINDOWS_USERNAME}"
+export WINDOWS_HOST="${WINDOWS_HOST:-host.docker.internal}"
+export WINDOWS_SSH_PORT="${WINDOWS_SSH_PORT:-2221}"
+EOF
+chmod 644 /etc/ssh/ssh-router-env
+
 echo "SSH Router starting with admin user: $ADMIN_USERNAME"
 
 # Execute the main command (sshd)
