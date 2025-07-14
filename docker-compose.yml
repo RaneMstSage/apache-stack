@@ -291,7 +291,7 @@ services:
       - WINDOWS_SSH_PORT=2221
     volumes:
       # SSH keys directory
-      - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:ro
+      - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw
       # Future: Repository access (commented out for Phase 1)
       # - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
       # - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
