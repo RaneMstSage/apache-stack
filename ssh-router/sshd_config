@@ -1,0 +1,29 @@
+# SSH Router Configuration - Basic Windows Routing only
+Port 22
+Protocol 2
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Authentication
+PubkeyAuthentication yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM yes
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Allow only admin users for now (windows routing) - dynamically set by entrypoint
+AllowUsers ADMIN_USERNAME_PLACEHOLDER
+
+# Admin user - proxy to Windows host
+Match User ADMIN_USERNAME_PLACEHOLDER
+    AuthorizedKeysFile /etc/ssh/keys/ADMIN_USERNAME_PLACEHOLDER_authorized_keys
+    ForceCommand /opt/scripts/windows_proxy.py
+    AllowAgentForwarding yes
+    AllowTcpForwarding yes
+    X11Forwarding no

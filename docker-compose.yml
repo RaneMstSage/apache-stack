@@ -275,6 +275,35 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+  
+  ssh-router:
+    build:
+      context: ./ssh-router
+      dockerfile: Dockerfile
+    container_name: ssh-router
+    ports:
+      - "2222:22"  # Takes over external SSH port
+    environment:
+      - TZ=America/New_York
+      - ADMIN_USERNAME=${SSH_USERNAME}
+      - WINDOWS_USERNAME=${SSH_USERNAME}
+      - WINDOWS_HOST=host.docker.internal
+      - WINDOWS_SSH_PORT=2221
+    volumes:
+      # SSH keys directory
+      - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:ro
+      # Future: Repository access (commented out for Phase 1)
+      # - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
+      # - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
+    networks:
+      - apache-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "sshd"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Certbot service for SSL certificate management - Updated based on Let's Encrypt with Docker best practices
   certbot:
