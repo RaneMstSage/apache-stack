@@ -52,6 +52,7 @@ echo "Git SSH keys file: $GIT_KEYS_FILE"
 
 # Create keys directory if it doesn't exist
 mkdir -p /etc/ssh/keys
+chown root:root /etc/ssh/keys
 chmod 755 /etc/ssh/keys
 
 # Make sure the admin keys file exists (even if empty)
