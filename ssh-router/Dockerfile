@@ -1,10 +1,13 @@
 FROM debian:bookworm-slim
 
-# Install SSH server and client
+# Install SSH server, client, Git, and LDAP tools
 RUN apt-get update && apt-get install -y \
     openssh-server \
     openssh-client \
     python3 \
+    git \
+    python3-ldap3 \
+    ldap-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Create SSH directories
@@ -24,5 +27,4 @@ EXPOSE 22
 
 # Use entrypoint to create user dynamically
 ENTRYPOINT ["/entrypoint.sh"]
-# Add -e flag to log to stderr (Docker captures this)
 CMD ["/usr/sbin/sshd", "-D"]

@@ -1,6 +1,5 @@
 #!/bin/bash
-# SSH Router Entrypoint - Creates user dynamically from environment variables
-
+# SSH Router Entrypoint - Creates users dynamically from environment variables
 set -e
 
 # Get admin username from environment (no default - must be provided)
@@ -10,13 +9,15 @@ if [ -z "$ADMIN_USERNAME" ]; then
     exit 1
 fi
 
-echo "Creating SSH user: $ADMIN_USERNAME"
+# Get git username from environment (default to 'git' if not provided)
+GIT_USERNAME=${GIT_USERNAME:-git}
 
+echo "Creating SSH user: $ADMIN_USERNAME"
 # Create the admin user if it doesn't exist
 if ! id "$ADMIN_USERNAME" &>/dev/null; then
     useradd -m -s /bin/bash "$ADMIN_USERNAME"
     echo "Created user: $ADMIN_USERNAME"
-    
+
     # Unlock the account (important for SSH key-only auth)
     usermod -p '*' "$ADMIN_USERNAME"
     echo "Unlocked user account"
@@ -24,30 +25,63 @@ else
     echo "User $ADMIN_USERNAME already exists"
 fi
 
-# Update SSH config to use the dynamic username
-sed -i "s/ADMIN_USERNAME_PLACEHOLDER/$ADMIN_USERNAME/g" /etc/ssh/sshd_config
+# Get git username from environment (default to 'git' if not provided)
+GIT_USERNAME=${GIT_USERNAME:-git}
 
-# Set up authorized keys file path
-KEYS_FILE="/etc/ssh/keys/${ADMIN_USERNAME}_authorized_keys"
-echo "SSH keys file: $KEYS_FILE"
+# Create git user for repository access
+echo "Creating git users: $GIT_USERNAME"
+if ! id "$GIT_USERNAME" &>/dev/null; then
+    useradd -m -s /bin/bash "$GIT_USERNAME"
+    echo "Created user: $GIT_USERNAME"
+
+    # Unlock the account (important for SSH key-only auth)
+    usermod -p '*' "$GIT_USERNAME"
+    echo "Unlocked user account"
+else
+    echo "User $GIT_USERNAME already exists"
+fi
+
+# Update SSH config to use the dynamic usernames
+sed -i "s/ADMIN_USERNAME_PLACEHOLDER/$ADMIN_USERNAME/g" /etc/ssh/sshd_config
+sed -i "s/GIT_USERNAME_PLACEHOLDER/$GIT_USERNAME/g" /etc/ssh/sshd_config
+
+# Set up authorized keys file path for admin user
+KEYS_FILE="/etc/ssh/keys/$ADMIN_USERNAME_authorized_keys"
+echo "Admin SSH keys file: $KEYS_FILE"
+
+# Set up authorized keys file path for git user
+GIT_KEYS_FILE="/etc/ssh/keys/$GIT_USERNAME_authorized_keys"
+echo "Git SSH keys file: $GIT_KEYS_FILE"
 
 # Create keys directory if it doesn't exist
 mkdir -p /etc/ssh/keys
 
-# Make sure the keys file exists (even if empty)
+# Make sure the admin keys file exists (even if empty)
 touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 
+# Make sure the git keys file exists (even if empty)
+touch "$GIT_KEYS_FILE"
+chmod 600 "$GIT_KEYS_FILE"
+
 # Write environment variables to a file that the scripts can read
-echo "Writing environment variables for SSH sessions..."
+echo "Writeing environment variables for SSH sessions ..."
 cat > /etc/ssh/ssh-router-env << EOF
+export ADMIN_USERNAME="${ADMIN_USERNAME}"
+export GIT_USERNAME="${GIT_USERNAME}"
 export WINDOWS_USERNAME="${WINDOWS_USERNAME}"
 export WINDOWS_HOST="${WINDOWS_HOST:-host.docker.internal}"
 export WINDOWS_SSH_PORT="${WINDOWS_SSH_PORT:-2221}"
+export GIT_REPOS_PATH="${GIT_REPOS_PATH:-/opt/repositories/git}"
+export LDAP_HOST="${LDAP_HOST:-openldap}"
+export LDAP_PORT="${LDAP_PORT:-389}"
+export LDAP_BASE_DN="${LDAP_BASE_DN:-dc=mstsage,dc=com}"
+export LDAP_BIND_DN="${LDAP_BIND_DN:-cn=admin,dc=mstsage,dc=com}"
+export LDAP_BIND_PASSWORD="${LDAP_BIND_PASSWORD}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 
-echo "SSH Router starting with admin user: $ADMIN_USERNAME"
+echo "SSH router starting with admin user: $ADMIN_USERNAME and git user: $GIT_USERNAME"
 
-# Execute the main command (sshd)
+# Execute the main command
 exec "$@"

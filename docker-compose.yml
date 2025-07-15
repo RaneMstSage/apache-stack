@@ -285,16 +285,27 @@ services:
       - "2222:22"  # Takes over external SSH port
     environment:
       - TZ=America/New_York
+      # Admin access
       - ADMIN_USERNAME=${SSH_USERNAME}
       - WINDOWS_USERNAME=${SSH_USERNAME}
       - WINDOWS_HOST=host.docker.internal
       - WINDOWS_SSH_PORT=2221
+      # Git access
+      - GIT_USERNAME=${GIT_USERNAME:-git}
+      - GIT_REPOS_PATH=/opt/repositories/git
+      # LDAP configuration
+      - LDAP_HOST=openldap
+      - LDAP_PORT=389
+      - LDAP_BASE_DN=dc=mstsage,dc=com
+      - LDAP_BIND_DN=cn=admin,dc=mstsage,dc=com
+      - LDAP_BIND_PASSWORD=${LDAP_ADMIN_PASSWORD}
     volumes:
       # SSH keys directory
       - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw
-      # Future: Repository access (commented out for Phase 1)
+      # Git repositories - now active!
+      - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
+      # SVN repositories for future
       # - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
-      # - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
     networks:
       - apache-network
     restart: unless-stopped
