@@ -34,6 +34,14 @@ mkdir -p /etc/ssh/keys
 touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 
+# Debug: Show what's in the authorized_keys file
+echo "Authorized keys content:"
+cat "$KEYS_FILE" | while read line; do
+    if [ ! -z "$line" ]; then
+        echo "  - $(echo $line | cut -d' ' -f3-)"
+    fi
+done
+
 # Write environment variables to a file that the scripts can read
 echo "Writing environment variables for SSH sessions..."
 cat > /etc/ssh/ssh-router-env << EOF
@@ -43,7 +51,11 @@ export WINDOWS_SSH_PORT="${WINDOWS_SSH_PORT:-2221}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 
-echo "SSH Router starting with admin user: $ADMIN_USERNAME"
+# Start rsyslog for logging
+service rsyslog start
 
-# Execute the main command (sshd)
+echo "SSH Router starting with admin user: $ADMIN_USERNAME"
+echo "Logs will be sent to stderr and captured by Docker"
+
+# Execute the main command (sshd with error logging to stderr)
 exec "$@"
