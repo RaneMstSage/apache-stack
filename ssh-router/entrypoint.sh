@@ -34,8 +34,15 @@ if ! id "$GIT_USERNAME" &>/dev/null; then
     # Unlock the account (important for SSH key-only auth)
     usermod -p '*' "$GIT_USERNAME"
     echo "Unlocked user account"
+    
+    # Configure Git to trust all repositories
+    su - ${GIT_USERNAME} -c "git config --global --add safe.directory '*'"
+    echo "Configured Git safe directories"
 else
     echo "User $GIT_USERNAME already exists"
+    # Still configure git in case the container was recreated
+    su - ${GIT_USERNAME} -c "git config --global --add safe.directory '*'"
+    echo "Configured Git safe directories"
 fi
 
 # Update SSH config to use the dynamic usernames
