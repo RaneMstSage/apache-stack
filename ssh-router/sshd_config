@@ -25,7 +25,7 @@ MaxStartups 10:30:100
 
 # Admin user routing to Windows
 Match User ADMIN_USERNAME_PLACEHOLDER
-    AuthorizedKeysFile /etc/ssh/keys/sage_authorized_keys
+    AuthorizedKeysFile /etc/ssh/keys/ADMIN_USERNAME_PLACEHOLDER_authorized_keys
     ForceCommand /opt/scripts/windows_proxy.py
     AllowAgentForwarding yes
     AllowTcpForwarding yes
@@ -33,7 +33,7 @@ Match User ADMIN_USERNAME_PLACEHOLDER
 
 # Git user routing to Git repositories
 Match User GIT_USERNAME_PLACEHOLDER
-    AuthorizedKeysFile /etc/ssh/keys/git_authorized_keys
+    AuthorizedKeysFile /etc/ssh/keys/GIT_USERNAME_PLACEHOLDER_authorized_keys
     ForceCommand /opt/scripts/git_proxy.py
     AllowAgentForwarding no
     AllowTcpForwarding no
