@@ -25,4 +25,4 @@ EXPOSE 22
 # Use entrypoint to create user dynamically
 ENTRYPOINT ["/entrypoint.sh"]
 # Add -e flag to log to stderr (Docker captures this)
-CMD ["/usr/sbin/sshd", "-D", "-e"]
+CMD ["/usr/sbin/sshd", "-D"]
