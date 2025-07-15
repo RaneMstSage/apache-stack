@@ -25,11 +25,8 @@ else
     echo "User $ADMIN_USERNAME already exists"
 fi
 
-# Get git username from environment (default to 'git' if not provided)
-GIT_USERNAME=${GIT_USERNAME:-git}
-
 # Create git user for repository access
-echo "Creating git users: $GIT_USERNAME"
+echo "Creating git user: $GIT_USERNAME"
 if ! id "$GIT_USERNAME" &>/dev/null; then
     useradd -m -s /bin/bash "$GIT_USERNAME"
     echo "Created user: $GIT_USERNAME"
@@ -46,11 +43,11 @@ sed -i "s/ADMIN_USERNAME_PLACEHOLDER/$ADMIN_USERNAME/g" /etc/ssh/sshd_config
 sed -i "s/GIT_USERNAME_PLACEHOLDER/$GIT_USERNAME/g" /etc/ssh/sshd_config
 
 # Set up authorized keys file path for admin user
-KEYS_FILE="/etc/ssh/keys/$ADMIN_USERNAME_authorized_keys"
+KEYS_FILE="/etc/ssh/keys/${ADMIN_USERNAME}_authorized_keys"
 echo "Admin SSH keys file: $KEYS_FILE"
 
 # Set up authorized keys file path for git user
-GIT_KEYS_FILE="/etc/ssh/keys/$GIT_USERNAME_authorized_keys"
+GIT_KEYS_FILE="/etc/ssh/keys/${GIT_USERNAME}_authorized_keys"
 echo "Git SSH keys file: $GIT_KEYS_FILE"
 
 # Create keys directory if it doesn't exist
@@ -68,7 +65,7 @@ chmod 600 "$GIT_KEYS_FILE"
 chown ${GIT_USERNAME}:${GIT_USERNAME} "$GIT_KEYS_FILE"
 
 # Write environment variables to a file that the scripts can read
-echo "Writeing environment variables for SSH sessions ..."
+echo "Writing environment variables for SSH sessions..."
 cat > /etc/ssh/ssh-router-env << EOF
 export ADMIN_USERNAME="${ADMIN_USERNAME}"
 export GIT_USERNAME="${GIT_USERNAME}"
