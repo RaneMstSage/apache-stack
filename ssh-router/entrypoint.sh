@@ -59,10 +59,12 @@ mkdir -p /etc/ssh/keys
 # Make sure the admin keys file exists (even if empty)
 touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
+chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} "$KEYS_FILE"
 
 # Make sure the git keys file exists (even if empty)
 touch "$GIT_KEYS_FILE"
 chmod 600 "$GIT_KEYS_FILE"
+chown ${GIT_USERNAME}:${GIT_USERNAME} "$GIT_KEYS_FILE"
 
 # Write environment variables to a file that the scripts can read
 echo "Writeing environment variables for SSH sessions ..."
