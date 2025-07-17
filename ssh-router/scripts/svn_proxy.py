@@ -102,7 +102,7 @@ def parse_svn_command():
 
 def check_ldap_access(username, repo_path=None, is_write=False):
     """
-    Check if the user has access to SVN repositories via LDAP groups
+    Check if the user has access to SVN repositories via LDAP groups AND local groups
 
     Args:
         username (str): Username to check
@@ -113,7 +113,7 @@ def check_ldap_access(username, repo_path=None, is_write=False):
         bool: True if access granted, false otherwise
     """
     try:
-        # Load environment variables for LDAP connection
+        # First check LDAP authentication (existing code)
         env = load_environment()
         
         # Extract LDAP settings from environment
@@ -180,8 +180,33 @@ def check_ldap_access(username, repo_path=None, is_write=False):
             return False
             
         logger.info(f"User {username} has SVN access (write={is_write})")
+        
+        # After LDAP validation succeeds, check local group membership
+        import grp
+        import pwd
+        
+        try:
+            # Get user info
+            user_info = pwd.getpwnam(username)
+            user_groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
+            
+            # Add user's primary group
+            primary_group = grp.getgrgid(user_info.pw_gid)
+            user_groups.append(primary_group.gr_name)
+            
+            # Check if user is in svnaccess group
+            if 'svnaccess' not in user_groups:
+                logger.warning(f"User {username} not in svnaccess group. Groups: {user_groups}")
+                return False
+            
+            logger.info(f"User {username} has both LDAP and svnaccess group access")
+            
+        except (KeyError, OSError) as e:
+            logger.error(f"Error checking local groups for {username}: {str(e)}")
+            return False
+        
         return True
-    
+        
     except ldap.LDAPError as e:
         logger.error(f"LDAP error: {str(e)}")
         return False

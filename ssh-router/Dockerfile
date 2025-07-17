@@ -8,13 +8,56 @@ RUN apt-get update && apt-get install -y \
     python3-ldap \
     ldap-utils \
     git \
-    subversion \
     vim \
     neovim \
     netcat-openbsd \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Build and install Subversion 1.14.5 (same as Redmine)
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        libserf-dev \
+        libapr1-dev \
+        libaprutil1-dev \
+        libsqlite3-dev \
+        zlib1g-dev \
+        libssl-dev \
+        libutf8proc-dev \
+        pkg-config \
+        wget \
+    ; \
+    rm -rf /var/lib/apt/lists/*; \
+    cd /tmp; \
+    wget https://archive.apache.org/dist/subversion/subversion-1.14.5.tar.bz2; \
+    tar -xjf subversion-1.14.5.tar.bz2; \
+    cd subversion-1.14.5; \
+    ./configure \
+        --prefix=/usr/local \
+        --with-serf \
+        --with-utf8proc=internal \
+        --with-lz4=internal \
+    ; \
+    make; \
+    make install; \
+    # Clean up build artifacts
+    cd /tmp; \
+    rm -rf subversion-1.14.5; \
+    rm subversion-1.14.5.tar.bz2; \
+    # Create necessary symlinks
+    ln -sf /usr/local/bin/svn /usr/bin/svn; \
+    ln -sf /usr/local/bin/svnadmin /usr/bin/svnadmin; \
+    ln -sf /usr/local/bin/svnlook /usr/bin/svnlook; \
+    ln -sf /usr/local/bin/svnserve /usr/bin/svnserve; \
+    # Update ldconfig to include the new libraries
+    echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf; \
+    ldconfig; \
+    # Remove build dependencies to keep image size down
+    apt-get purge -y --auto-remove build-essential wget pkg-config; \
+    apt-get clean
 
 # Create shared groups for repositories with specific GIDs
 RUN groupadd -g 1002 gitaccess && \

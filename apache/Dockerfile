@@ -26,7 +26,7 @@ RUN wget https://zlib.net/zlib-1.3.1.tar.gz \
  && wget https://archive.apache.org/dist/apr/apr-util-1.6.3.tar.gz \
  && wget https://github.com/nghttp2/nghttp2/releases/download/v1.64.0/nghttp2-1.64.0.tar.gz \
  && wget https://curl.se/download/curl-8.12.1.tar.gz \
- && wget https://downloads.apache.org/httpd/httpd-2.4.63.tar.gz \
+ && wget https://archive.apache.org/dist/httpd/httpd-2.4.63.tar.gz \
  && wget https://downloads.apache.org/httpd/mod_fcgid/mod_fcgid-2.3.9.tar.gz \
  && wget https://downloads.apache.org/subversion/subversion-1.14.5.tar.gz
 
