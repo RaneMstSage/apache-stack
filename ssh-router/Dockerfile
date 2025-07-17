@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     subversion \
     vim \
     neovim \
-    netcat \
+    netcat-openbsd \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
