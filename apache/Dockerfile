@@ -156,21 +156,24 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && ldconfig
 # Check if modules were installed correctly
 RUN ls -la /usr/local/apache2/modules/mod_*svn* || echo "Apache SVN modules not found"
 
-# Set up SVN repositories directory
-RUN mkdir -p /usr/local/apache2/svn && \
-    chown -R daemon:daemon /usr/local/apache2/svn
+# Create shared groups for repositories with specific GIDs
+RUN groupadd -g 1002 gitaccess && \
+    groupadd -g 1003 svnaccess
 
-# Set up Git HTTP support
+# Add daemon user to both groups
+RUN usermod -a -G gitaccess,svnaccess daemon
+
+# Set up Git HTTP support with gitaccess group
 RUN mkdir -p /usr/local/apache2/git && \
-    # Copy Git HTTP backend to CGI directory
-    mkdir -p /usr/local/apache2/cgi-bin && \
-    cp /usr/lib/git-core/git-http-backend /usr/local/apache2/cgi-bin/ && \
-    # Create directory for Git repositories
-    mkdir -p /usr/local/apache2/git && \
-    chown -R daemon:daemon /usr/local/apache2/git
+    chown -R daemon:gitaccess /usr/local/apache2/git && \
+    chmod -R 775 /usr/local/apache2/git && \
+    find /usr/local/apache2/git -type d -exec chmod g+s {} \;
 
-# Set Git default branch to main
-RUN git config --global init.defaultBranch main
+# Set up SVN repositories with svnaccess group
+RUN mkdir -p /usr/local/apache2/svn && \
+    chown -R daemon:svnaccess /usr/local/apache2/svn && \
+    chmod -R 775 /usr/local/apache2/svn && \
+    find /usr/local/apache2/svn -type d -exec chmod g+s {} \;
 
 # Cleanup
 RUN rm -rf /usr/src/*

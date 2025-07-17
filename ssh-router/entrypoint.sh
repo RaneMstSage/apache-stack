@@ -113,6 +113,51 @@ export LDAP_BIND_PASSWORD="${LDAP_BIND_PASSWORD}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 
+# Ensure both groups exist with correct GIDs
+if ! getent group gitaccess > /dev/null 2>&1; then
+    groupadd -g 1002 gitaccess
+    echo "Created gitaccess group with GID 1002"
+fi
+
+if ! getent group svnaccess > /dev/null 2>&1; then
+    groupadd -g 1003 svnaccess
+    echo "Created svnaccess group with GID 1003"
+fi
+
+# Ensure daemon user exists and is in both groups
+if ! id daemon > /dev/null 2>&1; then
+    useradd -u 1 -g 1 daemon
+fi
+usermod -a -G gitaccess,svnaccess daemon
+
+# Add Git user to gitaccess group
+usermod -a -G gitaccess "$GIT_USERNAME"
+echo "Added $GIT_USERNAME to gitaccess group"
+
+# Add SVN user to svnaccess group
+usermod -a -G svnaccess "$SVN_USERNAME"
+echo "Added $SVN_USERNAME to svnaccess group"
+
+# Set up Git repository permissions with gitaccess group
+GIT_REPOS_PATH="${GIT_REPOS_PATH:-/opt/repositories/git}"
+if [ -d "$GIT_REPOS_PATH" ]; then
+    echo "Setting up Git repository permissions at: $GIT_REPOS_PATH"
+    chown -R daemon:gitaccess "$GIT_REPOS_PATH"
+    chmod -R 775 "$GIT_REPOS_PATH"
+    find "$GIT_REPOS_PATH" -type d -exec chmod g+s {} \;
+    echo "Applied gitaccess permissions to Git repositories"
+fi
+
+# Set up SVN repository permissions with svnaccess group
+SVN_REPOS_PATH="${SVN_REPOS_PATH:-/opt/repositories/svn}"
+if [ -d "$SVN_REPOS_PATH" ]; then
+    echo "Setting up SVN repository permissions at: $SVN_REPOS_PATH"
+    chown -R daemon:svnaccess "$SVN_REPOS_PATH"
+    chmod -R 775 "$SVN_REPOS_PATH"
+    find "$SVN_REPOS_PATH" -type d -exec chmod g+s {} \;
+    echo "Applied svnaccess permissions to SVN repositories"
+fi
+
 echo "SSH router starting with admin user: $ADMIN_USERNAME, git user: $GIT_USERNAME, and svn user: $SVN_USERNAME"
 
 # Execute the main command

@@ -16,6 +16,14 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Create shared groups for repositories with specific GIDs
+RUN groupadd -g 1002 gitaccess && \
+    groupadd -g 1003 svnaccess
+
+# Ensure daemon user exists and add to both groups
+RUN useradd -u 1 -g 1 daemon 2>/dev/null || true && \
+    usermod -a -G gitaccess,svnaccess daemon
+
 # Create SSH directories
 RUN mkdir -p /var/run/sshd /etc/ssh/keys
 

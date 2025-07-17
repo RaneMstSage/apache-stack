@@ -10,6 +10,11 @@ FROM ruby:3.3-slim-bookworm
 # the values 999:999 are identical to the current user/group id assigned
 RUN groupadd -r -g 999 redmine && useradd -r -g redmine -u 999 redmine
 
+# Create shared groups and add redmine user to both
+RUN groupadd -g 1002 gitaccess && \
+    groupadd -g 1003 svnaccess && \
+    usermod -a -G gitaccess,svnaccess redmine
+
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \

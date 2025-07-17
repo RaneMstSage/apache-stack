@@ -7,6 +7,11 @@ import sys
 import re
 import subprocess
 import shlex
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def load_environment():
     """Load environment variables from file"""
@@ -103,22 +108,47 @@ def execute_git_command(command, repo_name):
     # Build the full repository path
     repo_full_path = os.path.join(git_repos_path, f"{repo_name}.git")
     
+    # If repository doesn't exist and this is a push (git-receive-pack),
+    # create the repository first with shared permissions
+    if not os.path.exists(repo_full_path) and command == 'git-receive-pack':
+        logger.info(f"Creating new repository: {repo_name}")
+        try:
+            # Create the repository directory with proper permissions
+            os.makedirs(repo_full_path, mode=0o775, exist_ok=True)
+            
+            # Initialize as bare repository with shared permissions
+            subprocess.run(['git', 'init', '--bare', '--shared=group', repo_full_path], check=True)
+            
+            # Set recommended Git configuration
+            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "core.sharedRepository", "group"], check=True)
+            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "receive.denyNonFastForwards", "false"], check=True)
+            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "http.receivepack", "true"], check=True)
+            
+            # Set proper ownership: daemon user, gitaccess group
+            subprocess.run(['chown', '-R', 'daemon:gitaccess', repo_full_path], check=True)
+            subprocess.run(['chmod', '-R', '775', repo_full_path], check=True)
+            subprocess.run(['find', repo_full_path, '-type', 'd', '-exec', 'chmod', 'g+s', '{}', ';'], check=True)
+            
+            logger.info(f"Repository {repo_name} created successfully with daemon:gitaccess permissions")
+        except Exception as e:
+            logger.error(f"Error creating repository: {e}")
+            sys.exit(1)
+    
     # Verify the repository exists
     if not os.path.exists(repo_full_path):
-        print(f"Error: Repository not found: {repo_name}")
+        logger.error(f"Repository not found: {repo_name}")
         sys.exit(1)
     
     # Build the command to execute
     git_cmd = [command, repo_full_path]
     
-    print(f"Executing: {' '.join(git_cmd)}")
+    logger.info(f"Executing: {' '.join(git_cmd)}")
     
     try:
         # Execute the Git command
-        # This replaces the current process with the Git command
         os.execvp(command, git_cmd)
     except Exception as e:
-        print(f"Error executing Git command: {e}")
+        logger.error(f"Error executing Git command: {e}")
         sys.exit(1)
 
 def main():

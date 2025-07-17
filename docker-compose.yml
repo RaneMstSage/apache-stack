@@ -106,6 +106,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    user: "0:1002"  # root:gitaccess for proper permissions
 
   apache2:
     image: ranemstsage/apache-stack-apache:latest
@@ -138,6 +139,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    user: "0:1002"  # root:gitaccess for proper permissions
   
   apache3:
     image: ranemstsage/apache-stack-apache:latest
@@ -170,6 +172,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    user: "0:1002"  # root:gitaccess for proper permissions
 
   php:
     image: ranemstsage/apache-stack-php:latest
@@ -277,9 +280,7 @@ services:
       start_period: 10s
   
   ssh-router:
-    build:
-      context: ./ssh-router
-      dockerfile: Dockerfile
+    image: ranemstsage/apache-stack-ssh-router:latest
     container_name: ssh-router
     ports:
       - "2222:22"  # Takes over external SSH port
@@ -291,6 +292,9 @@ services:
       - WINDOWS_SSH_PORT=${WINDOWS_SSH_PORT}
       - GIT_USERNAME=${GIT_USERNAME}
       - SVN_USERNAME=${SVN_USERNAME}
+      # Repository paths
+      - GIT_REPOS_PATH=/opt/repositories/git
+      - SVN_REPOS_PATH=/opt/repositories/svn
       # LDAP configuration
       - LDAP_HOST=${LDAP_HOST}
       - LDAP_PORT=${LDAP_PORT}
