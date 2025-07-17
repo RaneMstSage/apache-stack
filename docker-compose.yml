@@ -286,26 +286,24 @@ services:
     environment:
       - TZ=America/New_York
       # Admin access
-      - ADMIN_USERNAME=${SSH_USERNAME}
-      - WINDOWS_USERNAME=${SSH_USERNAME}
-      - WINDOWS_HOST=host.docker.internal
-      - WINDOWS_SSH_PORT=2221
-      # Git access
-      - GIT_USERNAME=${GIT_USERNAME:-git}
-      - GIT_REPOS_PATH=/opt/repositories/git
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - WINDOWS_SSH_HOST=${WINDOWS_SSH_HOST}
+      - WINDOWS_SSH_PORT=${WINDOWS_SSH_PORT}
+      - GIT_USERNAME=${GIT_USERNAME}
+      - SVN_USERNAME=${SVN_USERNAME}
       # LDAP configuration
-      - LDAP_HOST=openldap
-      - LDAP_PORT=389
-      - LDAP_BASE_DN=dc=mstsage,dc=com
-      - LDAP_BIND_DN=cn=admin,dc=mstsage,dc=com
-      - LDAP_BIND_PASSWORD=${LDAP_ADMIN_PASSWORD}
+      - LDAP_HOST=${LDAP_HOST}
+      - LDAP_PORT=${LDAP_PORT}
+      - LDAP_BASE_DN=${LDAP_BASE_DN}
+      - LDAP_BIND_DN=${LDAP_BIND_DN}
+      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD}
     volumes:
       # SSH keys directory
       - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw
-      # Git repositories - now active!
+      # Git repositories
       - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
-      # SVN repositories for future
-      # - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
+      # SVN repositories
+      - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
     networks:
       - apache-network
     restart: unless-stopped

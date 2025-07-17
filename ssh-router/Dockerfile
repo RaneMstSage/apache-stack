@@ -3,11 +3,17 @@ FROM debian:bookworm-slim
 # Install SSH server, client, Git, and LDAP tools
 RUN apt-get update && apt-get install -y \
     openssh-server \
-    openssh-client \
     python3 \
-    git \
-    python3-ldap3 \
+    python3-pip \
+    python3-ldap \
     ldap-utils \
+    git \
+    subversion \
+    vim \
+    neovim \
+    netcat \
+    curl \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Create SSH directories
