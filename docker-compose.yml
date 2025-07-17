@@ -290,6 +290,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - WINDOWS_SSH_HOST=${WINDOWS_SSH_HOST}
       - WINDOWS_SSH_PORT=${WINDOWS_SSH_PORT}
+      # Remove this line: - WINDOWS_USERNAME=${WINDOWS_USERNAME}
       - GIT_USERNAME=${GIT_USERNAME}
       - SVN_USERNAME=${SVN_USERNAME}
       # Repository paths

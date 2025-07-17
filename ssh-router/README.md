@@ -27,66 +27,40 @@ Internet:2222 → SSH Router Container → Windows Host:2221
 ### Environment Variables
 
 **Required:**
-- `SSH_USERNAME`: Username for both SSH router access and Windows target (set in .env)
+- `ADMIN_USERNAME`: Username for both SSH router access and Windows target (set in .env)
 
 **Optional:**
-- `WINDOWS_HOST`: Target Windows host (default: host.docker.internal)
+- `WINDOWS_SSH_HOST`: Target Windows host (default: host.docker.internal)
 - `WINDOWS_SSH_PORT`: Windows SSH port (default: 2221)
 
 ### SSH Key Setup
 
 1. Create SSH keys directory: `~/docker-volumes/ssh-router/keys/`
-2. Copy your SSH public key to: `~/docker-volumes/ssh-router/keys/{SSH_USERNAME}_authorized_keys`
+2. Copy your SSH public key to: `~/docker-volumes/ssh-router/keys/{ADMIN_USERNAME}_authorized_keys`
 3. Format: One key per line, standard SSH authorized_keys format
 
 Example:
 ```bash
-# If SSH_USERNAME=sage, create:
+# If ADMIN_USERNAME=sage, create:
 ~/docker-volumes/ssh-router/keys/sage_authorized_keys
 
 # Content:
 ssh-ed25519 AAAAC3N... My SSH Key
 ```
 
-## Files
+## Prerequisites
 
-- `Dockerfile`: Container build configuration
-- `entrypoint.sh`: Dynamic user creation and SSH config setup
-- `sshd_config`: SSH server configuration with user routing placeholders
-- `scripts/windows_proxy.py`: Windows SSH proxy handler
-- `scripts/routing_handler.py`: Future Git/SVN routing (placeholder)
+2. **Environment variables set in .env**:
+   ```bash
+   ADMIN_USERNAME=your_username
+   ```
 
 ## Testing
 
 ```bash
-# Build the container
-docker-compose build ssh-router
-
-# Start the service
-docker-compose up ssh-router
-
 # Test connection (should route to Windows host)
-ssh {SSH_USERNAME}@code.mstsage.com -p 2222
+ssh {ADMIN_USERNAME}@code.mstsage.com -p 2222
 ```
-
-## Prerequisites
-
-1. **Windows SSH moved to port 2221**:
-   ```powershell
-   # Edit C:\ProgramData\ssh\sshd_config
-   Port 2221
-   # Restart-Service sshd
-   ```
-
-2. **Environment variables set in .env**:
-   ```bash
-   SSH_USERNAME=your_username
-   ```
-
-3. **SSH keys directory created**:
-   ```bash
-   mkdir -p ~/docker-volumes/ssh-router/keys
-   ```
 
 ## Security Features
 

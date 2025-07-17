@@ -29,19 +29,19 @@ def proxy_to_windows():
     load_environment()
     
     # Get Windows host details from environment
-    windows_host = os.environ.get('WINDOWS_HOST', 'host.docker.internal')
+    windows_host = os.environ.get('WINDOWS_SSH_HOST', 'host.docker.internal')
     windows_port = os.environ.get('WINDOWS_SSH_PORT', '2221')
     
-    # Get Windows target username (separate from SSH router username)
-    windows_username = os.environ.get('WINDOWS_USERNAME')
-    if not windows_username:
-        print("Error: WINDOWS_USERNAME environment variable required")
+    # Get admin username (same as SSH router username)
+    admin_username = os.environ.get('ADMIN_USERNAME')
+    if not admin_username:
+        print("Error: ADMIN_USERNAME environment variable required")
         sys.exit(1)
     
     # Get the original SSH command if any
     original_command = os.environ.get('SSH_ORIGINAL_COMMAND', '')
     
-    print(f"Routing SSH connection to Windows host: {windows_username}@{windows_host}:{windows_port}")
+    print(f"Routing SSH connection to Windows host: {admin_username}@{windows_host}:{windows_port}")
     
     # Build SSH command to proxy to Windows
     ssh_cmd = [
@@ -49,7 +49,7 @@ def proxy_to_windows():
         '-o', 'StrictHostKeyChecking=no',
         '-o', 'UserKnownHostsFile=/dev/null',
         '-p', windows_port,
-        f"{windows_username}@{windows_host}"
+        f"{admin_username}@{windows_host}"
     ]
     
     # If there was an original command, pass it through
