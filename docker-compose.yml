@@ -300,7 +300,7 @@ services:
       - LDAP_PORT=${LDAP_PORT}
       - LDAP_BASE_DN=${LDAP_BASE_DN}
       - LDAP_BIND_DN=${LDAP_BIND_DN}
-      - LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD}
+      - LDAP_BIND_PASSWORD=${LDAP_ADMIN_PASSWORD}
     volumes:
       # SSH keys directory
       - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw

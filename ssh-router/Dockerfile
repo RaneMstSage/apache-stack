@@ -74,7 +74,11 @@ RUN mkdir -p /var/run/sshd /etc/ssh/keys
 COPY sshd_config /etc/ssh/sshd_config
 COPY scripts/ /opt/scripts/
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /opt/scripts/*.py /entrypoint.sh
+
+# Fix line endings and set permissions
+RUN sed -i 's/\r$//' /entrypoint.sh && \
+    sed -i 's/\r$//' /opt/scripts/*.py && \
+    chmod +x /opt/scripts/*.py /entrypoint.sh
 
 # Generate host keys
 RUN ssh-keygen -A

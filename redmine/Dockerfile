@@ -186,7 +186,14 @@ RUN set -eux; \
 
 VOLUME /usr/src/redmine/files
 
-COPY docker-entrypoint.sh /
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# Fix Windows line endings and set permissions
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
+
+# Set entrypoint
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 EXPOSE 3000
