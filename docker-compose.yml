@@ -307,8 +307,8 @@ services:
     volumes:
       # SSH keys directory
       - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw
-      # Repository access configuration
-      - ${DOCKER_VOLUMES_BASE}/ssh-router:/opt/config:ro
+      # Repository access configuration - FIX THIS LINE
+      - ${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf:/opt/config/repo-access.conf:ro
       # Git repositories
       - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
       # SVN repositories
