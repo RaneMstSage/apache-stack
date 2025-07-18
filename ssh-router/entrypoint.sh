@@ -109,6 +109,11 @@ export LDAP_PORT="${LDAP_PORT:-389}"
 export LDAP_BASE_DN="${LDAP_BASE_DN:-dc=mstsage,dc=com}"
 export LDAP_BIND_DN="${LDAP_BIND_DN:-cn=admin,dc=mstsage,dc=com}"
 export LDAP_BIND_PASSWORD="${LDAP_BIND_PASSWORD}"
+export MYSQL_HOST="${MYSQL_HOST:-mysql}"
+export MYSQL_DATABASE="${MYSQL_DATABASE}"
+export MYSQL_USER="${MYSQL_USER}"
+export MYSQL_PASSWORD="${MYSQL_PASSWORD}"
+export USE_DATABASE_AUTH="${USE_DATABASE_AUTH:-false}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 

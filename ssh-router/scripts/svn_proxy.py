@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 SVN SSH Proxy Handler
-Routes SVN commands via SSH to SVN Repository
+Routes SVN commands via SSH to SVN Repository with database SSH key lookup
 """
 
 import os
@@ -12,6 +12,14 @@ import logging
 import ldap
 import pwd
 import grp
+
+# Add MySQL import
+try:
+    import mysql.connector
+    MYSQL_AVAILABLE = True
+except ImportError:
+    MYSQL_AVAILABLE = False
+    print("Warning: mysql.connector not available, falling back to file-based auth")
 
 # Set up logging to both file and console for debugging
 logging.basicConfig(
@@ -44,7 +52,7 @@ def load_environment():
                         key, value = line.strip().split('=', 1)
                         # Remove quotes if present
                         value = value.strip('"\'')
-                        os.environ[key] = value  # ✅ Actually set in os.environ
+                        os.environ[key] = value
             logger.info(f"Loaded environment variables from {env_file}")
         except Exception as e:
             logger.error(f"Error loading environment: {str(e)}")
@@ -62,7 +70,73 @@ def get_environment_var(name, default=None):
     Returns:
         str: Value of the environment variable or default
     """
-    return os.environ.get(name, default)  # ✅ Just use os.environ directly
+    return os.environ.get(name, default)
+
+def get_ssh_key_fingerprint():
+    """Get the SSH key fingerprint from the current connection"""
+    # SSH doesn't directly provide this, but we can try to get it from the environment
+    # This requires sshd to be configured with: ExposeAuthInfo yes
+    auth_file = os.environ.get('SSH_USER_AUTH', '')
+    if auth_file and os.path.exists(auth_file):
+        try:
+            with open(auth_file, 'r') as f:
+                for line in f:
+                    if line.startswith('publickey '):
+                        # Extract fingerprint from the line
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            return parts[1]
+        except Exception as e:
+            logger.error(f"Error reading auth file: {e}")
+    
+    # Alternative: Try to get from environment if set by custom sshd
+    return os.environ.get('SSH_KEY_FINGERPRINT', '')
+
+def get_user_from_database(fingerprint=None):
+    """Query Redmine database for SSH key owner"""
+    if not MYSQL_AVAILABLE:
+        return None
+        
+    try:
+        # Connect to MySQL
+        conn = mysql.connector.connect(
+            host=os.environ.get('MYSQL_HOST', 'mysql'),
+            database=os.environ.get('MYSQL_DATABASE', 'redmine'),
+            user=os.environ.get('MYSQL_USER', 'redmine'),
+            password=os.environ.get('MYSQL_PASSWORD'),
+            port=int(os.environ.get('MYSQL_PORT', '3306'))
+        )
+        
+        cursor = conn.cursor()
+        
+        if fingerprint:
+            # Query by fingerprint (most reliable)
+            query = """
+            SELECT u.login 
+            FROM sage_ssh_keys s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.fingerprint = %s AND s.active = 1
+            LIMIT 1
+            """
+            cursor.execute(query, (fingerprint,))
+        else:
+            # Fallback: This would need more complex matching
+            # For now, return None
+            return None
+            
+        result = cursor.fetchone()
+        
+        if result:
+            logger.info(f"Found user from database: {result[0]}")
+            return result[0]
+            
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+    finally:
+        if 'conn' in locals() and conn:
+            conn.close()
+    
+    return None
 
 def parse_svn_command():
     """
@@ -96,6 +170,46 @@ def parse_svn_command():
         'command': original_command,
         'repo_path': repo_path,
     }
+
+def get_user_from_ssh_key():
+    """Get the LDAP username associated with the SSH key used for authentication"""
+    ssh_user = os.environ.get('USER', 'unknown')
+    logger.info(f"SSH system user: {ssh_user}")
+    
+    # First, try database lookup if enabled
+    if MYSQL_AVAILABLE and os.environ.get('USE_DATABASE_AUTH', 'false').lower() == 'true':
+        fingerprint = get_ssh_key_fingerprint()
+        if fingerprint:
+            db_user = get_user_from_database(fingerprint)
+            if db_user:
+                return db_user
+        else:
+            logger.warning("Could not get SSH key fingerprint for database lookup")
+    
+    # Fallback to file-based authentication
+    if ssh_user in ['git', 'svn', 'admin']:
+        keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
+        
+        if os.path.exists(keys_file):
+            try:
+                with open(keys_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                            
+                        parts = line.split()
+                        for part in parts:
+                            if part.startswith('user='):
+                                ldap_username = part.split('=', 1)[1]
+                                logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
+                                return ldap_username
+                                
+            except Exception as e:
+                logger.error(f"Error reading keys file {keys_file}: {e}")
+    
+    logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
+    return ssh_user
 
 def check_ldap_access(username, repo_path=None, is_write=False):
     """Check if user has access to SVN repository via LDAP groups AND local groups"""
@@ -254,37 +368,6 @@ def check_ldap_access(username, repo_path=None, is_write=False):
         logger.error(f"Error checking access for '{username}': {str(e)}")
         return False
 
-def get_user_from_ssh_key():
-    """Get the LDAP username associated with the SSH key used for authentication"""
-    # Same implementation as git_proxy.py
-    ssh_user = os.environ.get('USER', 'unknown')
-    logger.info(f"SSH system user: {ssh_user}")
-    
-    if ssh_user in ['git', 'svn', 'admin']:
-        keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
-        
-        if os.path.exists(keys_file):
-            try:
-                with open(keys_file, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line or line.startswith('#'):
-                            continue
-                            
-                        parts = line.split()
-                        for part in parts:
-                            if part.startswith('user='):
-                                ldap_username = part.split('=', 1)[1]
-                                logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
-                                return ldap_username
-                                
-            except Exception as e:
-                logger.error(f"Error reading keys file {keys_file}: {e}")
-    
-    logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
-    return ssh_user
-
-# Update execute_svn_command to use proper user resolution:
 def execute_svn_command(command_info):
     """Execute the SVN command (svnserve)"""
     try:
@@ -306,7 +389,7 @@ def execute_svn_command(command_info):
         is_write = True  # SVN+SSH typically needs write access
         
         # Validate access with proper parameters (matching git_proxy.py pattern)
-        if not check_ldap_access(username, repo_path, is_write):  # ✅ Add is_write parameter
+        if not check_ldap_access(username, repo_path, is_write):
             sys.stderr.write(f"Access denied for user {username}\n")
             sys.exit(1)
         
@@ -360,8 +443,8 @@ def extract_repo_path_from_ssh():
 def main():
     """Main SVN Proxy handler"""
     try:
-        # Load environment variables (same as git_proxy.py)
-        load_environment()  # ✅ Add this missing line
+        # Load environment variables
+        load_environment()
         
         # Parse SVN command
         command_info = parse_svn_command()

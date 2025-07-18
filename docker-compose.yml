@@ -299,6 +299,11 @@ services:
       - LDAP_BASE_DN=${LDAP_BASE_DN}
       - LDAP_BIND_DN=${LDAP_BIND_DN}
       - LDAP_BIND_PASSWORD=${LDAP_ADMIN_PASSWORD}
+      - MYSQL_HOST=mysql
+      - MYSQL_DATABASE=${REDMINE_DB_DATABASE}
+      - MYSQL_USER=${REDMINE_DB_USERNAME}
+      - MYSQL_PASSWORD=${REDMINE_DB_PASSWORD}
+      - USE_DATABASE_AUTH=true
     volumes:
       # SSH keys directory
       - ${DOCKER_VOLUMES_BASE}/ssh-router/keys:/etc/ssh/keys:rw
@@ -308,6 +313,8 @@ services:
       - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
     networks:
       - apache-network
+    depends_on:
+      - mysql 
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "pgrep", "sshd"]

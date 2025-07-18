@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Git SSH Proxy - Routes Git SSH commands with LDAP authorization
+Git SSH Proxy - Routes Git SSH commands with LDAP authorization and database SSH key lookup
 """
 import os
 import sys
@@ -11,6 +11,15 @@ import logging
 import ldap
 import grp
 import pwd
+import hashlib
+
+# Add MySQL import
+try:
+    import mysql.connector
+    MYSQL_AVAILABLE = True
+except ImportError:
+    MYSQL_AVAILABLE = False
+    print("Warning: mysql.connector not available, falling back to file-based auth")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -30,6 +39,72 @@ def load_environment():
                     if value.startswith('"') and value.endswith('"'):
                         value = value[1:-1]
                     os.environ[key] = value
+
+def get_ssh_key_fingerprint():
+    """Get the SSH key fingerprint from the current connection"""
+    # SSH doesn't directly provide this, but we can try to get it from the environment
+    # This requires sshd to be configured with: ExposeAuthInfo yes
+    auth_file = os.environ.get('SSH_USER_AUTH', '')
+    if auth_file and os.path.exists(auth_file):
+        try:
+            with open(auth_file, 'r') as f:
+                for line in f:
+                    if line.startswith('publickey '):
+                        # Extract fingerprint from the line
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            return parts[1]
+        except Exception as e:
+            logger.error(f"Error reading auth file: {e}")
+    
+    # Alternative: Try to get from environment if set by custom sshd
+    return os.environ.get('SSH_KEY_FINGERPRINT', '')
+
+def get_user_from_database(fingerprint=None):
+    """Query Redmine database for SSH key owner"""
+    if not MYSQL_AVAILABLE:
+        return None
+        
+    try:
+        # Connect to MySQL
+        conn = mysql.connector.connect(
+            host=os.environ.get('MYSQL_HOST', 'mysql'),
+            database=os.environ.get('MYSQL_DATABASE', 'redmine'),
+            user=os.environ.get('MYSQL_USER', 'redmine'),
+            password=os.environ.get('MYSQL_PASSWORD'),
+            port=int(os.environ.get('MYSQL_PORT', '3306'))
+        )
+        
+        cursor = conn.cursor()
+        
+        if fingerprint:
+            # Query by fingerprint (most reliable)
+            query = """
+            SELECT u.login 
+            FROM sage_ssh_keys s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.fingerprint = %s AND s.active = 1
+            LIMIT 1
+            """
+            cursor.execute(query, (fingerprint,))
+        else:
+            # Fallback: This would need more complex matching
+            # For now, return None
+            return None
+            
+        result = cursor.fetchone()
+        
+        if result:
+            logger.info(f"Found user from database: {result[0]}")
+            return result[0]
+            
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+    finally:
+        if 'conn' in locals() and conn:
+            conn.close()
+    
+    return None
 
 def parse_git_command():
     """Parse the Git SSH command to extract repository and operation"""
@@ -67,21 +142,25 @@ def parse_git_command():
 
 def get_user_from_ssh_key():
     """Get the LDAP username associated with the SSH key used for authentication"""
-    import hashlib
-    
     ssh_user = os.environ.get('USER', 'unknown')
     logger.info(f"SSH system user: {ssh_user}")
     
-    # Method 1: Extract from authorized_keys comment
+    # First, try database lookup if enabled
+    if MYSQL_AVAILABLE and os.environ.get('USE_DATABASE_AUTH', 'false').lower() == 'true':
+        fingerprint = get_ssh_key_fingerprint()
+        if fingerprint:
+            db_user = get_user_from_database(fingerprint)
+            if db_user:
+                return db_user
+        else:
+            logger.warning("Could not get SSH key fingerprint for database lookup")
+    
+    # Fallback to file-based authentication
     if ssh_user in ['git', 'svn', 'admin']:
         keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
         
         if os.path.exists(keys_file):
             try:
-                # Get the public key from SSH connection
-                ssh_key_type = os.environ.get('SSH_KEY_TYPE', '')
-                ssh_key_data = os.environ.get('SSH_KEY_DATA', '')
-                
                 logger.info(f"Looking for key mapping in {keys_file}")
                 
                 with open(keys_file, 'r') as f:
@@ -108,12 +187,6 @@ def get_user_from_ssh_key():
     if ldap_user:
         logger.info(f"Using LDAP_USER environment variable: {ldap_user}")
         return ldap_user
-    
-    # Method 3: Extract from SSH connection info
-    ssh_connection = os.environ.get('SSH_CONNECTION', '')
-    if ssh_connection:
-        logger.info(f"SSH connection: {ssh_connection}")
-        # You could implement IP-based mapping here
     
     # Fallback: Use SSH system user (not ideal for LDAP)
     logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
@@ -232,7 +305,7 @@ def check_ldap_access(username, repo_name, is_write):
             logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
             
         except (KeyError, OSError) as e:
-            logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")  # ✅ Fixed syntax
+            logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")
             return False
 
         conn.unbind_s()
