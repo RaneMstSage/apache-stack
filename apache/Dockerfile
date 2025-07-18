@@ -169,6 +169,11 @@ RUN mkdir -p /usr/local/apache2/git /usr/local/apache2/svn && \
     find /usr/local/apache2/git -type d -exec chmod g+s {} \; && \
     find /usr/local/apache2/svn -type d -exec chmod g+s {} \;
 
+# Set up Git HTTP support
+RUN mkdir -p /usr/local/apache2/cgi-bin && \
+    cp /usr/lib/git-core/git-http-backend /usr/local/apache2/cgi-bin/ && \
+    chmod 755 /usr/local/apache2/cgi-bin/git-http-backend
+
 # Add daemon user to apache-stack group for compatibility
 RUN usermod -a -G apache-stack daemon 2>/dev/null || true
 
