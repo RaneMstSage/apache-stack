@@ -27,3 +27,6 @@ secrets/
 
 # Docker Compose overrides that might contain credentials
 docker-compose.override.yml
+
+volumes/redmine/plugins/
+volumes/redmine/themes/
