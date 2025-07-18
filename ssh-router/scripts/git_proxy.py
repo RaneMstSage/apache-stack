@@ -185,7 +185,7 @@ def check_ldap_access(username, repo_name, is_write):
         # Repository-specific group mapping (matching Apache config)
         if repo_name in ['apache-stack', 'openwebui-pipelines', 'openwebui-stack']:
             required_groups = ['proj-infrastructure', 'admins']
-        elif repo_name in ['sage-repo-viewer', 'sage_checkout_plugin', 'SageDark']:
+        elif repo_name in ['sage-repo-viewer', 'sage_checkout_plugin', 'SageDark', 'sagemine_ssh_keys']:
             required_groups = ['proj-mstsage-tools', 'admins']
         elif repo_name == 'Archmage':
             required_groups = ['proj-fullsail', 'admins']
