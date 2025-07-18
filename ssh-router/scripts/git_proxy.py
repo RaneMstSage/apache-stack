@@ -161,9 +161,8 @@ def get_user_from_ssh_key():
     else:
         logger.warning("Could not get SSH key fingerprint for database lookup")
     
-    # TEMPORARY: For testing, return a known user
-    logger.warning("TEMPORARY: Using fallback user 'rane_mstsage' for testing")
-    return 'rane_mstsage'
+    # No fallback - return None to force proper authentication
+    return None
 
 def check_ldap_access(username, repo_name, is_write):
     """Check if user has access to repository via LDAP groups AND local groups"""

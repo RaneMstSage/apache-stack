@@ -13,7 +13,7 @@ HostKey /etc/ssh/ssh_host_ed25519_key
 
 # Logging
 SyslogFacility AUTH
-LogLevel DEBUG3
+LogLevel VERBOSE
 
 # Connection settings
 ClientAliveInterval 60
@@ -49,4 +49,6 @@ Match User SVN_USERNAME_PLACEHOLDER
     X11Forwarding no
     PermitTTY no
 
+# Enable SSH key fingerprint exposure
 ExposeAuthInfo yes
+PermitUserEnvironment yes
