@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-ldap \
-    python3-mysql.connector \
     ldap-utils \
     git \
     vim \
@@ -15,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python MySQL connector via pip
+RUN pip3 install mysql-connector-python --break-system-packages
 
 # Build and install Subversion 1.14.5 (same as Redmine)
 RUN set -eux; \
