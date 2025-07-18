@@ -66,23 +66,58 @@ def parse_git_command():
     return command, repo_name, repo_path, is_write
 
 def get_user_from_ssh_key():
-    """Get the username associated with the SSH key used for authentication"""
-    # SSH sets this when ForceCommand is used
+    """Get the LDAP username associated with the SSH key used for authentication"""
+    import hashlib
+    
     ssh_user = os.environ.get('USER', 'unknown')
+    logger.info(f"SSH system user: {ssh_user}")
     
-    # For now, we'll need to implement a mapping from SSH keys to LDAP users
-    # This could be done by:
-    # 1. Storing username in authorized_keys comment field
-    # 2. Maintaining a separate mapping file
-    # 3. Using SSH certificates with embedded usernames
+    # Method 1: Extract from authorized_keys comment
+    if ssh_user in ['git', 'svn', 'admin']:
+        keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
+        
+        if os.path.exists(keys_file):
+            try:
+                # Get the public key from SSH connection
+                ssh_key_type = os.environ.get('SSH_KEY_TYPE', '')
+                ssh_key_data = os.environ.get('SSH_KEY_DATA', '')
+                
+                logger.info(f"Looking for key mapping in {keys_file}")
+                
+                with open(keys_file, 'r') as f:
+                    for line_num, line in enumerate(f, 1):
+                        line = line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                            
+                        # Parse: ssh-rsa AAAA...key... ldap_user=rane_mstsage
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            # Look for ldap_user= in any part
+                            for part in parts:
+                                if part.startswith('ldap_user='):
+                                    ldap_username = part.split('=', 1)[1]
+                                    logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
+                                    return ldap_username
+                                    
+            except Exception as e:
+                logger.error(f"Error reading keys file {keys_file}: {e}")
     
-    # For Phase 2, we'll use a simple approach:
-    # The authorized_keys file should have comments like:
-    # ssh-rsa AAAA... user=rane_mstsage
+    # Method 2: Use environment variable if set by SSH
+    ldap_user = os.environ.get('LDAP_USER')
+    if ldap_user:
+        logger.info(f"Using LDAP_USER environment variable: {ldap_user}")
+        return ldap_user
     
-    # TODO: Implement actual key-to-user mapping
-    # For now, return a placeholder
-    return "git_user"
+    # Method 3: Extract from SSH connection info
+    ssh_connection = os.environ.get('SSH_CONNECTION', '')
+    if ssh_connection:
+        logger.info(f"SSH connection: {ssh_connection}")
+        # You could implement IP-based mapping here
+    
+    # Fallback: Use SSH system user (not ideal for LDAP)
+    logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
+    return ssh_user
 
 def check_ldap_access(username, repo_name, is_write):
     """Check if user has access to repository via LDAP groups AND local groups"""

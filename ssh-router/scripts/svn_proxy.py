@@ -214,10 +214,41 @@ def check_ldap_access(username, repo_path=None, is_write=False):
         logger.error(f"Error checking access: {str(e)}")
         return False
 
+def get_user_from_ssh_key():
+    """Get the LDAP username associated with the SSH key used for authentication"""
+    # Same implementation as git_proxy.py
+    ssh_user = os.environ.get('USER', 'unknown')
+    logger.info(f"SSH system user: {ssh_user}")
+    
+    if ssh_user in ['git', 'svn', 'admin']:
+        keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
+        
+        if os.path.exists(keys_file):
+            try:
+                with open(keys_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                            
+                        parts = line.split()
+                        for part in parts:
+                            if part.startswith('ldap_user='):
+                                ldap_username = part.split('=', 1)[1]
+                                logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
+                                return ldap_username
+                                
+            except Exception as e:
+                logger.error(f"Error reading keys file {keys_file}: {e}")
+    
+    logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
+    return ssh_user
+
+# Update execute_svn_command to use proper user resolution:
 def execute_svn_command(command_info):
     """Execute the SVN command (svnserve)"""
     try:
-        username = os.environ.get('USER', '')
+        username = get_user_from_ssh_key()  # ✅ Use proper mapping
         command = command_info['command']
         repo_path = command_info['repo_path']
 
