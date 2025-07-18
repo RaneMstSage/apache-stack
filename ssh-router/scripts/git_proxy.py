@@ -53,11 +53,24 @@ def get_ssh_key_fingerprint():
                     if line.startswith('publickey '):
                         parts = line.strip().split()
                         if len(parts) >= 3:
-                            # Format: publickey ssh-ed25519 SHA256:fingerprint_here
-                            return parts[2]  # Return the actual fingerprint, not the key type
-                        elif len(parts) >= 2:
-                            # Fallback: if only 2 parts, the second might be fingerprint
-                            return parts[1]
+                            # We have: publickey ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK6Cir0yAdikmQ3hqSWAItkpX9hwIBO2KaV4edRmisTo
+                            key_type = parts[1]
+                            key_data = parts[2]
+                            
+                            # Convert to SHA256 fingerprint format that SSH uses
+                            import base64
+                            try:
+                                key_bytes = base64.b64decode(key_data)
+                                fingerprint_hash = hashlib.sha256(key_bytes).digest()
+                                fingerprint = base64.b64encode(fingerprint_hash).decode('ascii').rstrip('=')
+                                fingerprint = f"SHA256:{fingerprint}"
+                                
+                                logger.info(f"Converted key to fingerprint: {fingerprint}")
+                                return fingerprint
+                            except Exception as e:
+                                logger.error(f"Error converting key to fingerprint: {e}")
+                                return None
+                            
         except Exception as e:
             logger.error(f"Error reading auth file: {e}")
     else:
@@ -67,12 +80,6 @@ def get_ssh_key_fingerprint():
     fingerprint = os.environ.get('SSH_KEY_FINGERPRINT', '')
     if fingerprint:
         return fingerprint
-    
-    # Method 3: Log all SSH environment variables for debugging
-    logger.warning("Available SSH environment variables for debugging:")
-    for key, value in os.environ.items():
-        if key.startswith('SSH_'):
-            logger.warning(f"  {key}: {value}")
     
     logger.warning("Could not extract SSH key fingerprint")
     return None
