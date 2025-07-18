@@ -20,6 +20,10 @@ ClientAliveInterval 60
 ClientAliveCountMax 3
 MaxStartups 10:30:100
 
+# Enable SSH key fingerprint exposure (MUST BE GLOBAL)
+ExposeAuthInfo yes
+PermitUserEnvironment yes
+
 # SFTP (disabled for this router)
 # Subsystem sftp /usr/lib/openssh/sftp-server
 
@@ -48,7 +52,3 @@ Match User SVN_USERNAME_PLACEHOLDER
     AllowTcpForwarding no
     X11Forwarding no
     PermitTTY no
-
-# Enable SSH key fingerprint exposure
-ExposeAuthInfo yes
-PermitUserEnvironment yes
