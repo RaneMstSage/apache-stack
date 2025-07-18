@@ -10,12 +10,17 @@ import re
 import subprocess
 import logging
 import ldap
+import pwd
+import grp
 
-# Set up logging
+# Set up logging to both file and console for debugging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='/var/log/svn_proxy.log',
+    handlers=[
+        logging.FileHandler('/tmp/svn_proxy.log'),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger('svn_proxy')
 
@@ -25,11 +30,8 @@ SVN_REPOS_PATH = "/opt/repositories/svn"
 def load_environment():
     """
     Load environment variables from the shared file created by entrypoint.sh
-
-    Returns:
-        dict: Environment variables loaded from the file
+    and apply them to os.environ (same as git_proxy.py)
     """
-    env = {}
     env_file = '/etc/ssh/ssh-router-env'
 
     if os.path.exists(env_file):
@@ -42,30 +44,25 @@ def load_environment():
                         key, value = line.strip().split('=', 1)
                         # Remove quotes if present
                         value = value.strip('"\'')
-                        env[key] = value
+                        os.environ[key] = value  # ✅ Actually set in os.environ
+            logger.info(f"Loaded environment variables from {env_file}")
         except Exception as e:
-            logging.error(f"Error loading environment: {str(e)}")
-
-    return env
+            logger.error(f"Error loading environment: {str(e)}")
+    else:
+        logger.warning(f"Environment file not found: {env_file}")
 
 def get_environment_var(name, default=None):
     """
-    Get an environment variable, first checking the environment , then the shared file
-
+    Get an environment variable from os.environ
+    
     Args:
-        name (str): Name of the the environment variable
+        name (str): Name of the environment variable
         default: Default value if not found
 
     Returns:
         str: Value of the environment variable or default
     """
-    # First check actual environment
-    if name in os.environ:
-        return os.environ[name]
-
-    # Then check loaded environment
-    env = load_environment()
-    return env.get(name, default)
+    return os.environ.get(name, default)  # ✅ Just use os.environ directly
 
 def parse_svn_command():
     """
@@ -291,7 +288,7 @@ def get_user_from_ssh_key():
 def execute_svn_command(command_info):
     """Execute the SVN command (svnserve)"""
     try:
-        username = get_user_from_ssh_key()  # ✅ Use proper mapping
+        username = get_user_from_ssh_key()
         command = command_info['command']
         repo_path = command_info['repo_path']
 
@@ -304,8 +301,12 @@ def execute_svn_command(command_info):
             sys.stderr.write("Error: SVN repositories not available.\n")
             sys.exit(1)
 
-        # Validate access (but don't auto-create)
-        if not check_ldap_access(username, repo_path):
+        # Determine if this is a write operation (SVN doesn't have clear read/write distinction like Git)
+        # For SVN+SSH, we'll assume write access is needed (more secure default)
+        is_write = True  # SVN+SSH typically needs write access
+        
+        # Validate access with proper parameters (matching git_proxy.py pattern)
+        if not check_ldap_access(username, repo_path, is_write):  # ✅ Add is_write parameter
             sys.stderr.write(f"Access denied for user {username}\n")
             sys.exit(1)
         
@@ -339,9 +340,29 @@ def execute_svn_command(command_info):
         sys.stderr.write(f"Error: {str(e)}\n")
         return 1
 
+def extract_repo_path_from_ssh():
+    """Extract repository path from SSH command for SVN+SSH protocol"""
+    # For svn+ssh://server/path, the path comes after the hostname
+    # SVN will pass this as arguments to svnserve
+    
+    # Check for repository path in command arguments
+    original_command = os.environ.get('SSH_ORIGINAL_COMMAND', '')
+    logger.info(f"Extracting repo path from command: {original_command}")
+    
+    # SVN+SSH typically doesn't use --root, path is implicit
+    # Let's also check sys.argv for any path information
+    logger.info(f"Command arguments: {sys.argv}")
+    
+    # For now, try to extract from SSH connection info if available
+    # This might be passed in environment or command line
+    return None  # Will rely on Apache config for path-based access
+
 def main():
     """Main SVN Proxy handler"""
     try:
+        # Load environment variables (same as git_proxy.py)
+        load_environment()  # ✅ Add this missing line
+        
         # Parse SVN command
         command_info = parse_svn_command()
 
