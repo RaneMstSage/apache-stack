@@ -85,6 +85,12 @@ RUN sed -i 's/\r$//' /entrypoint.sh && \
 # Generate host keys
 RUN ssh-keygen -A
 
+# Create log directory and set permissions
+RUN mkdir -p /var/log && \
+    chmod 755 /var/log && \
+    touch /var/log/svn_proxy.log /var/log/git_proxy.log && \
+    chmod 666 /var/log/svn_proxy.log /var/log/git_proxy.log
+
 # Expose SSH port
 EXPOSE 22
 

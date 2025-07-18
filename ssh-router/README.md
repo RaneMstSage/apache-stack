@@ -5,16 +5,18 @@ Custom SSH routing container for apache-stack infrastructure.
 ## Purpose
 
 Routes SSH connections by username to different backend services:
-- `admin@server` → Windows host SSH (admin access)
-- `git@server` → Git repositories (future - Phase 2)
-- `svn@server` → SVN repositories (future - Phase 3)
+- `admin@server` → Windows host SSH (admin access) ✅ **Active**
+- `git@server` → Git repositories with LDAP authorization ✅ **Active** 
+- `svn@server` → SVN repositories with LDAP authorization ✅ **Active**
 
 ## Current Implementation
 
-**Phase 1**: Windows SSH routing only
-- Routes admin user SSH connections to Windows host on configurable port
-- Maintains existing SSH key authentication
-- Dynamic username configuration (no hardcoded usernames)
+**Phase 1**: Multi-service SSH routing with LDAP authentication
+- Routes admin user SSH connections to Windows host 
+- Routes Git SSH connections to Git repositories with project-based access control
+- Routes SVN SSH connections to SVN repositories with project-based access control
+- LDAP group authorization with fallback group search
+- Maintains SSH key authentication with LDAP user mapping
 
 ## Current Implementation Notes
 
