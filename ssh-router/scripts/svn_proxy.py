@@ -101,117 +101,160 @@ def parse_svn_command():
     }
 
 def check_ldap_access(username, repo_path=None, is_write=False):
-    """
-    Check if the user has access to SVN repositories via LDAP groups AND local groups
-
-    Args:
-        username (str): Username to check
-        repo_path (str, optional): Repository path
-        is_write (bool): whether write access is needed
-
-    Returns:
-        bool: True if access granted, false otherwise
-    """
+    """Check if user has access to SVN repository via LDAP groups AND local groups"""
+    
     try:
-        # First check LDAP authentication (existing code)
-        env = load_environment()
+        # Load LDAP configuration (same as git_proxy.py)
+        ldap_host = os.environ.get('LDAP_HOST', 'openldap')
+        ldap_port = int(os.environ.get('LDAP_PORT', '389'))
+        ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
+        ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
+        ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
         
-        # Extract LDAP settings from environment
-        ldap_server = f"ldap://{env.get('LDAP_HOST', 'openldap')}:{env.get('LDAP_PORT', '389')}"
-        ldap_base_dn = env.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
-        ldap_bind_dn = env.get('LDAP_BIND_DN', f"cn=admin,{ldap_base_dn}")
-        ldap_bind_password = env.get('LDAP_BIND_PASSWORD', '')
+        logger.info(f"Checking LDAP access for user '{username}' to SVN repo '{repo_path}' (write={is_write})")
         
-        logger.info(f"Connecting to LDAP server: {ldap_server}")
+        # Connect to LDAP server
+        ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
+        conn = ldap.initialize(ldap_uri)
+        conn.set_option(ldap.OPT_REFERRALS, 0)
+        conn.protocol_version = ldap.VERSION3
         
-        # Connect to LDAP
-        conn = ldap.initialize(ldap_server)
+        # Bind with admin credentials
         conn.simple_bind_s(ldap_bind_dn, ldap_bind_password)
         
         # Search for the user
-        user_filter = f"(&(objectClass=inetOrgPerson)(uid={username}))"
-        user_attrs = ['memberOf']
+        user_search_base = f"ou=Users,{ldap_base_dn}"
+        user_filter = f"(uid={username})"
+        user_result = conn.search_s(user_search_base, ldap.SCOPE_SUBTREE, user_filter, ['memberOf'])
         
-        logger.info(f"Searching for user: {username}")
-        result = conn.search_s(ldap_base_dn, ldap.SCOPE_SUBTREE, user_filter, user_attrs)
-        
-        if not result:
-            logger.warning(f"User {username} not found in LDAP")
+        if not user_result:
+            logger.warning(f"User '{username}' not found in LDAP")
             return False
         
-        # Check group membership
-        user_dn, user_attrs = result[0]
+        # Get user's groups using member search (same as git_proxy.py)
+        user_dn, user_attrs = user_result[0]
+        user_groups = []
         
-        if 'memberOf' not in user_attrs:
-            logger.warning(f"User {username} has no group memberships")
-            return False
+        # Method 1: Try memberOf attribute (if LDAP has memberOf overlay)
+        if 'memberOf' in user_attrs:
+            for group_dn in user_attrs['memberOf']:
+                group_dn_str = group_dn.decode('utf-8')
+                if group_dn_str.startswith('cn='):
+                    group_name = group_dn_str.split(',')[0].split('=')[1]
+                    user_groups.append(group_name)
+            logger.info(f"Found groups via memberOf: {user_groups}")
         
-        groups = user_attrs['memberOf']
-        if isinstance(groups, bytes):
-            groups = [groups]
+        # Method 2: Search groups that have this user as member (fallback)
+        if not user_groups:
+            logger.info(f"No memberOf found, searching groups for user membership")
+            user_full_dn = user_dn
+            group_search_base = f"ou=Groups,{ldap_base_dn}"
+            group_filter = f"(member={user_full_dn})"
+            group_results = conn.search_s(group_search_base, ldap.SCOPE_SUBTREE, group_filter, ['cn'])
             
-        # Convert bytes to strings if needed
-        groups = [g.decode('utf-8') if isinstance(g, bytes) else g for g in groups]
+            for group_dn, group_attrs in group_results:
+                if 'cn' in group_attrs:
+                    group_name = group_attrs['cn'][0].decode('utf-8')
+                    user_groups.append(group_name)
+            logger.info(f"Found groups via member search: {user_groups}")
         
-        # Check for required group memberships
-        svn_users_group = f"cn=svnusers,ou=Groups,{ldap_base_dn}"
-        svn_developers_group = f"cn=svndevelopers,ou=Groups,{ldap_base_dn}"
+        logger.info(f"User '{username}' LDAP groups: {user_groups}")
         
-        # If repository-specific access is needed, we can check for specialized groups
+        # SVN Repository-specific group mapping (matching Apache config)
+        required_groups = []
+        repo_name = None
+        
         if repo_path:
-            repo_name = os.path.basename(repo_path)
-            repo_specific_read = f"cn=svn-{repo_name}-users,ou=Groups,{ldap_base_dn}"
-            repo_specific_write = f"cn=svn-{repo_name}-developers,ou=Groups,{ldap_base_dn}"
-            
-            # Check if user is in repo-specific groups
-            has_read_access = svn_users_group in groups or repo_specific_read in groups
-            has_write_access = svn_developers_group in groups or repo_specific_write in groups
+            # Extract repository collection from path
+            path_parts = repo_path.strip('/').split('/')
+            if len(path_parts) > 0:
+                repo_name = path_parts[0]  # First part is the collection name
+        
+        # Map SVN collections to LDAP groups (based on your Apache config)
+        if repo_name in ['alt_night']:
+            # Personal repos - check specific user OR admin
+            if username == 'alt_night':
+                logger.info(f"Personal repository access granted for user '{username}'")
+            else:
+                required_groups = ['admins']
+        elif repo_name in ['kschuetz']:
+            # Personal repos - check specific user OR admin  
+            if username == 'rane_mstsage':
+                logger.info(f"Personal repository access granted for user '{username}'")
+            else:
+                required_groups = ['admins']
+        elif repo_name in ['wagganjr']:
+            # Personal repos - check specific user OR admin
+            if username == 'wagganjr':
+                logger.info(f"Personal repository access granted for user '{username}'")
+            else:
+                required_groups = ['admins']
+        elif repo_name in ['zupaxis']:
+            # Personal repos - check specific user OR admin
+            if username == 'ZupAxis':
+                logger.info(f"Personal repository access granted for user '{username}'")
+            else:
+                required_groups = ['admins']
+        elif repo_name in ['fullsail']:
+            # Educational repositories
+            required_groups = ['proj-fullsail', 'admins']
+        elif repo_name in ['cgprojects', 'smashingpumpkins']:
+            # PumpkinHead Studios projects
+            required_groups = ['org-pumpkinhead', 'admins']
+        elif repo_name in ['codingprojects', 'kineticheart']:
+            # MstSage Entertainment projects
+            required_groups = ['org-mstsage', 'admins']
+        elif repo_name in ['gamedev']:
+            # Game development projects
+            required_groups = ['proj-cgprojects', 'admins']
+        elif repo_name in ['tutorials']:
+            # Tutorial repositories
+            required_groups = ['proj-tutorials', 'admins']
         else:
-            # Just check the general SVN groups
-            has_read_access = svn_users_group in groups
-            has_write_access = svn_developers_group in groups
+            # Default: basic SVN access OR admin
+            required_groups = ['svn-users', 'admins']
+            if is_write:
+                required_groups = ['svn-developers', 'admins']
+
+        # Check if user has required LDAP groups (skip for personal repo owner)
+        if required_groups:  # Only check if we have groups to check
+            has_ldap_access = any(group in user_groups for group in required_groups)
+            if not has_ldap_access:
+                logger.warning(f"User '{username}' missing required LDAP groups for '{repo_name}': {required_groups}")
+                return False
         
-        if is_write and not has_write_access:
-            logger.warning(f"User {username} does not have SVN write access")
-            return False
-            
-        if not has_read_access and not has_write_access:
-            logger.warning(f"User {username} does not have SVN access")
-            return False
-            
-        logger.info(f"User {username} has SVN access (write={is_write})")
-        
-        # After LDAP validation succeeds, check local group membership
-        import grp
-        import pwd
-        
+        # Also check local file system group membership
+        # NOTE: Check SSH system user (svn), not LDAP user, for local groups
+        ssh_user = os.environ.get('USER', 'unknown')
+
         try:
-            # Get user info
-            user_info = pwd.getpwnam(username)
-            user_groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
+            # Get SSH system user info (svn, git, admin) - these exist in container
+            user_info = pwd.getpwnam(ssh_user)
+            local_groups = [g.gr_name for g in grp.getgrall() if ssh_user in g.gr_mem]
             
             # Add user's primary group
             primary_group = grp.getgrgid(user_info.pw_gid)
-            user_groups.append(primary_group.gr_name)
+            local_groups.append(primary_group.gr_name)
             
-            # Check if user is in apache-stack group (for file system permissions)
-            if 'apache-stack' not in user_groups:
-                logger.warning(f"User {username} not in apache-stack group. Groups: {user_groups}")
+            # Check if SSH system user is in apache-stack group (for file system permissions)
+            if 'apache-stack' not in local_groups:
+                logger.warning(f"SSH user '{ssh_user}' not in apache-stack group. Local groups: {local_groups}")
                 return False
-
-            logger.info(f"User {username} has both LDAP and apache-stack group access")
+            
+            logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
             
         except (KeyError, OSError) as e:
-            logger.error(f"Error checking local groups for {username}: {str(e)}")
+            logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")
             return False
-        
+
+        conn.unbind_s()
         return True
         
     except ldap.LDAPError as e:
-        logger.error(f"LDAP error: {str(e)}")
+        logger.error(f"LDAP error for user '{username}': {str(e)}")
         return False
     except Exception as e:
-        logger.error(f"Error checking access: {str(e)}")
+        logger.error(f"Error checking access for '{username}': {str(e)}")
         return False
 
 def get_user_from_ssh_key():

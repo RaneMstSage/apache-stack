@@ -29,6 +29,9 @@ RUN set -eux; \
     sed -ri 's/(rights)="none" (pattern="PDF")/\1="read" \2/' /etc/ImageMagick-6/policy.xml; \
     rm -rf /var/lib/apt/lists/*
 
+# Configure Git to trust all repository directories
+RUN git config --system --add safe.directory '*'
+
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases
 ENV GOSU_VERSION 1.17

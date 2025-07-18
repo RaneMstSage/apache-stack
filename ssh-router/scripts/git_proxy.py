@@ -150,52 +150,91 @@ def check_ldap_access(username, repo_name, is_write):
             logger.warning(f"User '{username}' not found in LDAP")
             return False
         
-        # Get user's groups
+        # Get user's groups - try memberOf first, then search groups for membership
         user_dn, user_attrs = user_result[0]
         user_groups = []
         
+        # Method 1: Try memberOf attribute (if LDAP has memberOf overlay)
         if 'memberOf' in user_attrs:
             for group_dn in user_attrs['memberOf']:
                 group_dn_str = group_dn.decode('utf-8')
-                # Extract group name from DN (e.g., "cn=gitusers,ou=Groups,dc=mstsage,dc=com" -> "gitusers")
                 if group_dn_str.startswith('cn='):
                     group_name = group_dn_str.split(',')[0].split('=')[1]
                     user_groups.append(group_name)
+            logger.info(f"Found groups via memberOf: {user_groups}")
+        
+        # Method 2: Search groups that have this user as member (fallback)
+        if not user_groups:
+            logger.info(f"No memberOf found, searching groups for user membership")
+            user_full_dn = user_dn
+            group_search_base = f"ou=Groups,{ldap_base_dn}"
+            group_filter = f"(member={user_full_dn})"
+            group_results = conn.search_s(group_search_base, ldap.SCOPE_SUBTREE, group_filter, ['cn'])
+            
+            for group_dn, group_attrs in group_results:
+                if 'cn' in group_attrs:
+                    group_name = group_attrs['cn'][0].decode('utf-8')
+                    user_groups.append(group_name)
+            logger.info(f"Found groups via member search: {user_groups}")
         
         logger.info(f"User '{username}' LDAP groups: {user_groups}")
         
-        # Check Git access requirements
-        required_groups = ['gitusers']  # Base requirement for Git access
-        if is_write:
-            required_groups.append('gitdevelopers')  # Additional requirement for write access
+        # Check Git access requirements based on repository
+        required_groups = []
         
-        # Check if user has required LDAP groups
-        has_ldap_access = any(group in user_groups for group in required_groups)
-        if not has_ldap_access:
-            logger.warning(f"User '{username}' missing required LDAP groups: {required_groups}")
-            return False
+        # Repository-specific group mapping (matching Apache config)
+        if repo_name in ['apache-stack', 'openwebui-pipelines', 'openwebui-stack']:
+            required_groups = ['proj-infrastructure', 'admins']
+        elif repo_name in ['sage-repo-viewer', 'sage_checkout_plugin', 'SageDark']:
+            required_groups = ['proj-mstsage-tools', 'admins']
+        elif repo_name == 'Archmage':
+            required_groups = ['proj-fullsail', 'admins']
+        elif repo_name in ['UnityRPG', 'complete-unity-3d-dev-csharp']:
+            required_groups = ['proj-gamedev', 'admins']
+        elif repo_name in ['SchuetzKenneth_VFX_Unity', 'first-repo']:
+            # Personal repos - check specific user OR admin
+            if username == 'rane_mstsage':
+                logger.info(f"Personal repository access granted for user '{username}'")
+                # Still need to check local file system access below
+            else:
+                required_groups = ['admins']  # Only admins can access others' personal repos
+        else:
+            # Default: basic git access OR admin
+            required_groups = ['git-users', 'admins']
+            if is_write:
+                required_groups = ['git-developers', 'admins']
+
+        # Check if user has required LDAP groups (skip for personal repo owner)
+        if required_groups:  # Only check if we have groups to check
+            has_ldap_access = any(group in user_groups for group in required_groups)
+            if not has_ldap_access:
+                logger.warning(f"User '{username}' missing required LDAP groups for '{repo_name}': {required_groups}")
+                return False
         
         # Also check local file system group membership
+        # NOTE: Check SSH system user (git/svn), not LDAP user, for local groups
+        ssh_user = os.environ.get('USER', 'unknown')
+
         try:
-            # Get user info
-            user_info = pwd.getpwnam(username)
-            local_groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
+            # Get SSH system user info (git, svn, admin) - these exist in container
+            user_info = pwd.getpwnam(ssh_user)
+            local_groups = [g.gr_name for g in grp.getgrall() if ssh_user in g.gr_mem]
             
             # Add user's primary group
             primary_group = grp.getgrgid(user_info.pw_gid)
             local_groups.append(primary_group.gr_name)
             
-            # Check if user is in apache-stack group (for file system permissions)
+            # Check if SSH system user is in apache-stack group (for file system permissions)
             if 'apache-stack' not in local_groups:
-                logger.warning(f"User '{username}' not in apache-stack group. Local groups: {local_groups}")
+                logger.warning(f"SSH user '{ssh_user}' not in apache-stack group. Local groups: {local_groups}")
                 return False
             
-            logger.info(f"User '{username}' has both LDAP and local group access")
+            logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
             
         except (KeyError, OSError) as e:
-            logger.error(f"Error checking local groups for '{username}': {str(e})")
+            logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")  # ✅ Fixed syntax
             return False
-        
+
         conn.unbind_s()
         return True
         

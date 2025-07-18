@@ -177,6 +177,13 @@ RUN mkdir -p /usr/local/apache2/cgi-bin && \
 # Add daemon user to apache-stack group for compatibility
 RUN usermod -a -G apache-stack daemon 2>/dev/null || true
 
+# Configure Git to trust all repository directories
+RUN git config --system --add safe.directory '*'
+
+# Configure Apache to run as apache user with apache-stack group
+RUN sed -i 's/^User.*/User apache/' /usr/local/apache2/conf/httpd.conf && \
+    sed -i 's/^Group.*/Group apache-stack/' /usr/local/apache2/conf/httpd.conf
+
 # Cleanup
 RUN rm -rf /usr/src/*
 

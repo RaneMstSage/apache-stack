@@ -66,6 +66,9 @@ RUN groupadd -g 1002 apache-stack
 RUN useradd -u 1 -g 1 daemon 2>/dev/null || true && \
     usermod -a -G apache-stack daemon
 
+# Configure Git to trust all repository directories
+RUN git config --system --add safe.directory '*'
+
 # Create SSH directories
 RUN mkdir -p /var/run/sshd /etc/ssh/keys
 

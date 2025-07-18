@@ -118,12 +118,6 @@ if ! getent group apache-stack > /dev/null 2>&1; then
     echo "Created apache-stack group with GID 1002"
 fi
 
-# Ensure apache user exists with correct UID and group
-if ! id apache > /dev/null 2>&1; then
-    useradd -u 1001 -g apache-stack -s /usr/sbin/nologin apache
-    echo "Created apache user with UID 1001 in apache-stack group"
-fi
-
 # Add all SSH users to apache-stack group for repository access
 usermod -a -G apache-stack "$ADMIN_USERNAME"
 echo "Added $ADMIN_USERNAME to apache-stack group"
@@ -133,26 +127,6 @@ echo "Added $GIT_USERNAME to apache-stack group"
 
 usermod -a -G apache-stack "$SVN_USERNAME"  
 echo "Added $SVN_USERNAME to apache-stack group"
-
-# Set up Git repository permissions with apache-stack group
-GIT_REPOS_PATH="${GIT_REPOS_PATH:-/opt/repositories/git}"
-if [ -d "$GIT_REPOS_PATH" ]; then
-    echo "Setting up Git repository permissions at: $GIT_REPOS_PATH"
-    chown -R apache:apache-stack "$GIT_REPOS_PATH"
-    chmod -R 775 "$GIT_REPOS_PATH"
-    find "$GIT_REPOS_PATH" -type d -exec chmod g+s {} \;
-    echo "Applied apache-stack permissions to Git repositories"
-fi
-
-# Set up SVN repository permissions with apache-stack group
-SVN_REPOS_PATH="${SVN_REPOS_PATH:-/opt/repositories/svn}"
-if [ -d "$SVN_REPOS_PATH" ]; then
-    echo "Setting up SVN repository permissions at: $SVN_REPOS_PATH"
-    chown -R apache:apache-stack "$SVN_REPOS_PATH"
-    chmod -R 775 "$SVN_REPOS_PATH"
-    find "$SVN_REPOS_PATH" -type d -exec chmod g+s {} \;
-    echo "Applied apache-stack permissions to SVN repositories"
-fi
 
 echo "SSH router starting with admin user: $ADMIN_USERNAME, git user: $GIT_USERNAME, and svn user: $SVN_USERNAME"
 
