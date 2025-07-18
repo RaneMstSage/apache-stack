@@ -48,3 +48,5 @@ Match User SVN_USERNAME_PLACEHOLDER
     AllowTcpForwarding no
     X11Forwarding no
     PermitTTY no
+
+ExposeAuthInfo yes

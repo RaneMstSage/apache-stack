@@ -42,23 +42,25 @@ def load_environment():
 
 def get_ssh_key_fingerprint():
     """Get the SSH key fingerprint from the current connection"""
-    # SSH doesn't directly provide this, but we can try to get it from the environment
-    # This requires sshd to be configured with: ExposeAuthInfo yes
     auth_file = os.environ.get('SSH_USER_AUTH', '')
     if auth_file and os.path.exists(auth_file):
         try:
             with open(auth_file, 'r') as f:
                 for line in f:
                     if line.startswith('publickey '):
-                        # Extract fingerprint from the line
                         parts = line.strip().split()
                         if len(parts) >= 2:
                             return parts[1]
         except Exception as e:
             logger.error(f"Error reading auth file: {e}")
-    
+    else:
+        logger.warning(f"SSH_USER_AUTH not set or file does not exist: {auth_file}")
+
     # Alternative: Try to get from environment if set by custom sshd
-    return os.environ.get('SSH_KEY_FINGERPRINT', '')
+    fingerprint = os.environ.get('SSH_KEY_FINGERPRINT', '')
+    if not fingerprint:
+        logger.warning("SSH_KEY_FINGERPRINT environment variable not set")
+    return fingerprint
 
 def get_user_from_database(fingerprint=None):
     """Query Redmine database for SSH key owner"""
