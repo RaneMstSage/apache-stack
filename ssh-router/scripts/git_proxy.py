@@ -90,12 +90,12 @@ def get_user_from_ssh_key():
                         if not line or line.startswith('#'):
                             continue
                             
-                        # Parse: ssh-rsa AAAA...key... ldap_user=rane_mstsage
+                        # Parse: ssh-rsa AAAA...key... user=rane_mstsage
                         parts = line.split()
                         if len(parts) >= 2:
-                            # Look for ldap_user= in any part
+                            # Look for user= in any part
                             for part in parts:
-                                if part.startswith('ldap_user='):
+                                if part.startswith('user='):
                                     ldap_username = part.split('=', 1)[1]
                                     logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
                                     return ldap_username

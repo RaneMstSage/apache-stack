@@ -233,7 +233,7 @@ def get_user_from_ssh_key():
                             
                         parts = line.split()
                         for part in parts:
-                            if part.startswith('ldap_user='):
+                            if part.startswith('user='):
                                 ldap_username = part.split('=', 1)[1]
                                 logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
                                 return ldap_username
