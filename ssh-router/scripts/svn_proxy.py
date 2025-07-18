@@ -172,44 +172,17 @@ def parse_svn_command():
     }
 
 def get_user_from_ssh_key():
-    """Get the LDAP username associated with the SSH key used for authentication"""
-    ssh_user = os.environ.get('USER', 'unknown')
-    logger.info(f"SSH system user: {ssh_user}")
-    
-    # First, try database lookup if enabled
-    if MYSQL_AVAILABLE and os.environ.get('USE_DATABASE_AUTH', 'false').lower() == 'true':
-        fingerprint = get_ssh_key_fingerprint()
-        if fingerprint:
-            db_user = get_user_from_database(fingerprint)
-            if db_user:
-                return db_user
+    fingerprint = get_ssh_key_fingerprint()
+    if fingerprint:
+        db_user = get_user_from_database(fingerprint)
+        if db_user:
+            logger.info(f"User '{db_user}' found in Redmine database for fingerprint '{fingerprint}'")
+            return db_user
         else:
-            logger.warning("Could not get SSH key fingerprint for database lookup")
-    
-    # Fallback to file-based authentication
-    if ssh_user in ['git', 'svn', 'admin']:
-        keys_file = f"/etc/ssh/keys/{ssh_user}_authorized_keys"
-        
-        if os.path.exists(keys_file):
-            try:
-                with open(keys_file, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line or line.startswith('#'):
-                            continue
-                            
-                        parts = line.split()
-                        for part in parts:
-                            if part.startswith('user='):
-                                ldap_username = part.split('=', 1)[1]
-                                logger.info(f"Found LDAP user mapping: {ssh_user} -> {ldap_username}")
-                                return ldap_username
-                                
-            except Exception as e:
-                logger.error(f"Error reading keys file {keys_file}: {e}")
-    
-    logger.warning(f"No LDAP user mapping found, using SSH user: {ssh_user}")
-    return ssh_user
+            logger.warning(f"No user found in Redmine database for fingerprint '{fingerprint}'")
+    else:
+        logger.warning("Could not get SSH key fingerprint for database lookup")
+    return None
 
 def check_ldap_access(username, repo_path=None, is_write=False):
     """Check if user has access to SVN repository via LDAP groups AND local groups"""
