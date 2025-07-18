@@ -8,6 +8,9 @@ import re
 import subprocess
 import shlex
 import logging
+import ldap
+import grp
+import pwd
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -82,22 +85,91 @@ def get_user_from_ssh_key():
     return "git_user"
 
 def check_ldap_access(username, repo_name, is_write):
-    """Check if user has access to repository via LDAP groups"""
+    """Check if user has access to repository via LDAP groups AND local groups"""
     
-    # For Phase 2 implementation, we'll add actual LDAP checking here
-    # For now, just log what we would check
-    
-    print(f"Checking LDAP access for user '{username}' to repo '{repo_name}' (write={is_write})")
-    
-    # TODO: Implement actual LDAP group checking
-    # This would:
-    # 1. Connect to LDAP server
-    # 2. Get user's groups
-    # 3. Check against repository access rules
-    # 4. Consider read vs write permissions
-    
-    # For now, return True to allow access
-    return True
+    try:
+        # Load LDAP configuration
+        ldap_host = os.environ.get('LDAP_HOST', 'openldap')
+        ldap_port = int(os.environ.get('LDAP_PORT', '389'))
+        ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
+        ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
+        ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
+        
+        logger.info(f"Checking LDAP access for user '{username}' to repo '{repo_name}' (write={is_write})")
+        
+        # Connect to LDAP server
+        ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
+        conn = ldap.initialize(ldap_uri)
+        conn.set_option(ldap.OPT_REFERRALS, 0)
+        conn.protocol_version = ldap.VERSION3
+        
+        # Bind with admin credentials
+        conn.simple_bind_s(ldap_bind_dn, ldap_bind_password)
+        
+        # Search for the user
+        user_search_base = f"ou=Users,{ldap_base_dn}"
+        user_filter = f"(uid={username})"
+        user_result = conn.search_s(user_search_base, ldap.SCOPE_SUBTREE, user_filter, ['memberOf'])
+        
+        if not user_result:
+            logger.warning(f"User '{username}' not found in LDAP")
+            return False
+        
+        # Get user's groups
+        user_dn, user_attrs = user_result[0]
+        user_groups = []
+        
+        if 'memberOf' in user_attrs:
+            for group_dn in user_attrs['memberOf']:
+                group_dn_str = group_dn.decode('utf-8')
+                # Extract group name from DN (e.g., "cn=gitusers,ou=Groups,dc=mstsage,dc=com" -> "gitusers")
+                if group_dn_str.startswith('cn='):
+                    group_name = group_dn_str.split(',')[0].split('=')[1]
+                    user_groups.append(group_name)
+        
+        logger.info(f"User '{username}' LDAP groups: {user_groups}")
+        
+        # Check Git access requirements
+        required_groups = ['gitusers']  # Base requirement for Git access
+        if is_write:
+            required_groups.append('gitdevelopers')  # Additional requirement for write access
+        
+        # Check if user has required LDAP groups
+        has_ldap_access = any(group in user_groups for group in required_groups)
+        if not has_ldap_access:
+            logger.warning(f"User '{username}' missing required LDAP groups: {required_groups}")
+            return False
+        
+        # Also check local file system group membership
+        try:
+            # Get user info
+            user_info = pwd.getpwnam(username)
+            local_groups = [g.gr_name for g in grp.getgrall() if username in g.gr_mem]
+            
+            # Add user's primary group
+            primary_group = grp.getgrgid(user_info.pw_gid)
+            local_groups.append(primary_group.gr_name)
+            
+            # Check if user is in apache-stack group (for file system permissions)
+            if 'apache-stack' not in local_groups:
+                logger.warning(f"User '{username}' not in apache-stack group. Local groups: {local_groups}")
+                return False
+            
+            logger.info(f"User '{username}' has both LDAP and local group access")
+            
+        except (KeyError, OSError) as e:
+            logger.error(f"Error checking local groups for '{username}': {str(e})")
+            return False
+        
+        conn.unbind_s()
+        return True
+        
+    except ldap.LDAPError as e:
+        logger.error(f"LDAP error for user '{username}': {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Error checking access for '{username}': {str(e)}")
+        return False
 
 def execute_git_command(command, repo_name):
     """Execute the Git command on the actual repository"""
@@ -108,35 +180,17 @@ def execute_git_command(command, repo_name):
     # Build the full repository path
     repo_full_path = os.path.join(git_repos_path, f"{repo_name}.git")
     
-    # If repository doesn't exist and this is a push (git-receive-pack),
-    # create the repository first with shared permissions
-    if not os.path.exists(repo_full_path) and command == 'git-receive-pack':
-        logger.info(f"Creating new repository: {repo_name}")
-        try:
-            # Create the repository directory with proper permissions
-            os.makedirs(repo_full_path, mode=0o775, exist_ok=True)
-            
-            # Initialize as bare repository with shared permissions
-            subprocess.run(['git', 'init', '--bare', '--shared=group', repo_full_path], check=True)
-            
-            # Set recommended Git configuration
-            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "core.sharedRepository", "group"], check=True)
-            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "receive.denyNonFastForwards", "false"], check=True)
-            subprocess.run(['git', 'config', '-f', f"{repo_full_path}/config", "http.receivepack", "true"], check=True)
-            
-            # Set proper ownership: daemon user, gitaccess group
-            subprocess.run(['chown', '-R', 'daemon:gitaccess', repo_full_path], check=True)
-            subprocess.run(['chmod', '-R', '775', repo_full_path], check=True)
-            subprocess.run(['find', repo_full_path, '-type', 'd', '-exec', 'chmod', 'g+s', '{}', ';'], check=True)
-            
-            logger.info(f"Repository {repo_name} created successfully with daemon:gitaccess permissions")
-        except Exception as e:
-            logger.error(f"Error creating repository: {e}")
-            sys.exit(1)
-    
-    # Verify the repository exists
+    # Repository must exist - do not auto-create
     if not os.path.exists(repo_full_path):
         logger.error(f"Repository not found: {repo_name}")
+        print(f"Error: Repository '{repo_name}' does not exist.")
+        print("Repositories must be created by administrators.")
+        sys.exit(1)
+    
+    # Verify it's a valid Git repository
+    if not os.path.exists(os.path.join(repo_full_path, 'config')):
+        logger.error(f"Invalid Git repository: {repo_name}")
+        print(f"Error: '{repo_name}' is not a valid Git repository.")
         sys.exit(1)
     
     # Build the command to execute

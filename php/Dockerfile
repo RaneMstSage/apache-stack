@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
         libldap2-dev \
         libssl-dev \
         libsasl2-dev \
+        vim \
+        neovim \
     && docker-php-ext-install -j$(nproc) \
         gd \
         mysqli \

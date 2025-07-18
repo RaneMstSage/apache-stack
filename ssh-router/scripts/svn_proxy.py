@@ -194,12 +194,12 @@ def check_ldap_access(username, repo_path=None, is_write=False):
             primary_group = grp.getgrgid(user_info.pw_gid)
             user_groups.append(primary_group.gr_name)
             
-            # Check if user is in svnaccess group
-            if 'svnaccess' not in user_groups:
-                logger.warning(f"User {username} not in svnaccess group. Groups: {user_groups}")
+            # Check if user is in apache-stack group (for file system permissions)
+            if 'apache-stack' not in user_groups:
+                logger.warning(f"User {username} not in apache-stack group. Groups: {user_groups}")
                 return False
-            
-            logger.info(f"User {username} has both LDAP and svnaccess group access")
+
+            logger.info(f"User {username} has both LDAP and apache-stack group access")
             
         except (KeyError, OSError) as e:
             logger.error(f"Error checking local groups for {username}: {str(e)}")
@@ -215,44 +215,40 @@ def check_ldap_access(username, repo_path=None, is_write=False):
         return False
 
 def execute_svn_command(command_info):
-    """
-    Execute the SVN command (svnserve)
-
-    Args:
-        command_info (dict): Command information from parse_svn_command
-
-    Returns:
-        int: Command exit code
-    """
+    """Execute the SVN command (svnserve)"""
     try:
-        # SVN username is the SSH username
         username = os.environ.get('USER', '')
         command = command_info['command']
         repo_path = command_info['repo_path']
 
-        # Get SVN repos path from environment if available
+        # Get SVN repos path from environment
         svn_repos_path = get_environment_var('SVN_REPOS_PATH', SVN_REPOS_PATH)
+        
+        # Verify SVN repositories directory exists
+        if not os.path.exists(svn_repos_path):
+            logger.error(f"SVN repositories directory not found: {svn_repos_path}")
+            sys.stderr.write("Error: SVN repositories not available.\n")
+            sys.exit(1)
 
-        # Validate access
+        # Validate access (but don't auto-create)
         if not check_ldap_access(username, repo_path):
             sys.stderr.write(f"Access denied for user {username}\n")
             sys.exit(1)
         
-        # Execute svnserve command
+        # Execute svnserve command - let it handle repository validation
         logger.info(f"Executing SVN command for user {username}: {command}")
 
-        # Replace command with explicit path if needed
-        svnserve_path = "/usr/bin/svnserve"
+        # Use explicit svnserve path
+        svnserve_path = "/usr/local/bin/svnserve"  # Your custom build
         command = command.replace("svnserve ", f"{svnserve_path} ")
 
-        # Add --root option if not present to point to the repositories
+        # Add --root option to point to repositories
         if "--root=" not in command:
             command = f"{command} --root={svn_repos_path}"
 
-        # Execute the command
         logger.info(f"Running command: {command}")
 
-        # Pass stdin/stdout/stderr through to allow interactive use
+        # Execute and pass through stdin/stdout/stderr
         process = subprocess.Popen(
             command,
             shell=True,
@@ -261,7 +257,6 @@ def execute_svn_command(command_info):
             stderr=sys.stderr,
         )
 
-        # Wait for the process to complete
         process.wait()
         return process.returncode
 

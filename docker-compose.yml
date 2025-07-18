@@ -106,7 +106,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    user: "0:1002"  # root:gitaccess for proper permissions
 
   apache2:
     image: ranemstsage/apache-stack-apache:latest
@@ -139,7 +138,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    user: "0:1002"  # root:gitaccess for proper permissions
   
   apache3:
     image: ranemstsage/apache-stack-apache:latest
@@ -172,7 +170,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    user: "0:1002"  # root:gitaccess for proper permissions
 
   php:
     image: ranemstsage/apache-stack-php:latest

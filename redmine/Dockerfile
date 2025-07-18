@@ -1,38 +1,33 @@
-#
-# NOTE: THIS DOCKERFILE IS GENERATED VIA "apply-templates.sh"
-#
-# PLEASE DO NOT EDIT IT DIRECTLY.
-#
-
 FROM ruby:3.3-slim-bookworm
 
 # explicitly set uid/gid to guarantee that it won't change in the future
 # the values 999:999 are identical to the current user/group id assigned
 RUN groupadd -r -g 999 redmine && useradd -r -g redmine -u 999 redmine
 
-# Create shared groups and add redmine user to both
-RUN groupadd -g 1002 gitaccess && \
-    groupadd -g 1003 svnaccess && \
-    usermod -a -G gitaccess,svnaccess redmine
+# Create apache-stack group and add redmine user to it
+RUN groupadd -g 1002 apache-stack && \
+    usermod -a -G apache-stack redmine
 
 RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
-		bzr \
-		ca-certificates \
-		ghostscript \
-		git \
-		gsfonts \
-		imagemagick \
-		mercurial \
-		openssh-client \
-		subversion \
-		tini \
-		wget \
-	; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        bzr \
+        ca-certificates \
+        ghostscript \
+        git \
+        gsfonts \
+        imagemagick \
+        mercurial \
+        openssh-client \
+        subversion \
+        tini \
+        wget \
+        vim \
+        neovim \
+    ; \
 # allow imagemagick to use ghostscript for PDF -> PNG thumbnail conversion (4.1+)
-	sed -ri 's/(rights)="none" (pattern="PDF")/\1="read" \2/' /etc/ImageMagick-6/policy.xml; \
-	rm -rf /var/lib/apt/lists/*
+    sed -ri 's/(rights)="none" (pattern="PDF")/\1="read" \2/' /etc/ImageMagick-6/policy.xml; \
+    rm -rf /var/lib/apt/lists/*
 
 # grab gosu for easy step-down from root
 # https://github.com/tianon/gosu/releases

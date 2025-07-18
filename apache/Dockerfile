@@ -9,6 +9,7 @@ RUN apt update && apt install -y \
     default-jdk libperl-dev ruby ruby-dev \
     git \
     python3-requests \
+    vim neovim nano \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src
@@ -156,24 +157,20 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && ldconfig
 # Check if modules were installed correctly
 RUN ls -la /usr/local/apache2/modules/mod_*svn* || echo "Apache SVN modules not found"
 
-# Create shared groups for repositories with specific GIDs
-RUN groupadd -g 1002 gitaccess && \
-    groupadd -g 1003 svnaccess
+# Create apache-stack group and apache user for repository access
+RUN groupadd -g 1002 apache-stack && \
+    useradd -u 1001 -g apache-stack -s /usr/sbin/nologin apache
 
-# Add daemon user to both groups
-RUN usermod -a -G gitaccess,svnaccess daemon
-
-# Set up Git HTTP support with gitaccess group
-RUN mkdir -p /usr/local/apache2/git && \
-    chown -R daemon:gitaccess /usr/local/apache2/git && \
-    chmod -R 775 /usr/local/apache2/git && \
-    find /usr/local/apache2/git -type d -exec chmod g+s {} \;
-
-# Set up SVN repositories with svnaccess group
-RUN mkdir -p /usr/local/apache2/svn && \
-    chown -R daemon:svnaccess /usr/local/apache2/svn && \
-    chmod -R 775 /usr/local/apache2/svn && \
+# Create and set proper permissions on repository directories
+RUN mkdir -p /usr/local/apache2/git /usr/local/apache2/svn && \
+    chown -R apache:apache-stack /usr/local/apache2/git && \
+    chown -R apache:apache-stack /usr/local/apache2/svn && \
+    chmod -R 775 /usr/local/apache2/git /usr/local/apache2/svn && \
+    find /usr/local/apache2/git -type d -exec chmod g+s {} \; && \
     find /usr/local/apache2/svn -type d -exec chmod g+s {} \;
+
+# Add daemon user to apache-stack group for compatibility
+RUN usermod -a -G apache-stack daemon 2>/dev/null || true
 
 # Cleanup
 RUN rm -rf /usr/src/*

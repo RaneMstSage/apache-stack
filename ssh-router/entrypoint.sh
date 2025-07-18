@@ -112,49 +112,46 @@ export LDAP_BIND_PASSWORD="${LDAP_BIND_PASSWORD}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 
-# Ensure both groups exist with correct GIDs
-if ! getent group gitaccess > /dev/null 2>&1; then
-    groupadd -g 1002 gitaccess
-    echo "Created gitaccess group with GID 1002"
+# Ensure apache-stack group exists with correct GID
+if ! getent group apache-stack > /dev/null 2>&1; then
+    groupadd -g 1002 apache-stack
+    echo "Created apache-stack group with GID 1002"
 fi
 
-if ! getent group svnaccess > /dev/null 2>&1; then
-    groupadd -g 1003 svnaccess
-    echo "Created svnaccess group with GID 1003"
-fi
-
-# Ensure daemon user exists and is in both groups
+# Ensure daemon user exists and is in apache-stack group
 if ! id daemon > /dev/null 2>&1; then
     useradd -u 1 -g 1 daemon
 fi
-usermod -a -G gitaccess,svnaccess daemon
+usermod -a -G apache-stack daemon
 
-# Add Git user to gitaccess group
-usermod -a -G gitaccess "$GIT_USERNAME"
-echo "Added $GIT_USERNAME to gitaccess group"
+# Add all SSH users to apache-stack group for repository access
+usermod -a -G apache-stack "$ADMIN_USERNAME"
+echo "Added $ADMIN_USERNAME to apache-stack group"
 
-# Add SVN user to svnaccess group
-usermod -a -G svnaccess "$SVN_USERNAME"
-echo "Added $SVN_USERNAME to svnaccess group"
+usermod -a -G apache-stack "$GIT_USERNAME"
+echo "Added $GIT_USERNAME to apache-stack group"
 
-# Set up Git repository permissions with gitaccess group
+usermod -a -G apache-stack "$SVN_USERNAME"  
+echo "Added $SVN_USERNAME to apache-stack group"
+
+# Set up Git repository permissions with apache-stack group
 GIT_REPOS_PATH="${GIT_REPOS_PATH:-/opt/repositories/git}"
 if [ -d "$GIT_REPOS_PATH" ]; then
     echo "Setting up Git repository permissions at: $GIT_REPOS_PATH"
-    chown -R daemon:gitaccess "$GIT_REPOS_PATH"
+    chown -R daemon:apache-stack "$GIT_REPOS_PATH"
     chmod -R 775 "$GIT_REPOS_PATH"
     find "$GIT_REPOS_PATH" -type d -exec chmod g+s {} \;
-    echo "Applied gitaccess permissions to Git repositories"
+    echo "Applied apache-stack permissions to Git repositories"
 fi
 
-# Set up SVN repository permissions with svnaccess group
+# Set up SVN repository permissions with apache-stack group
 SVN_REPOS_PATH="${SVN_REPOS_PATH:-/opt/repositories/svn}"
 if [ -d "$SVN_REPOS_PATH" ]; then
     echo "Setting up SVN repository permissions at: $SVN_REPOS_PATH"
-    chown -R daemon:svnaccess "$SVN_REPOS_PATH"
+    chown -R daemon:apache-stack "$SVN_REPOS_PATH"
     chmod -R 775 "$SVN_REPOS_PATH"
     find "$SVN_REPOS_PATH" -type d -exec chmod g+s {} \;
-    echo "Applied svnaccess permissions to SVN repositories"
+    echo "Applied apache-stack permissions to SVN repositories"
 fi
 
 echo "SSH router starting with admin user: $ADMIN_USERNAME, git user: $GIT_USERNAME, and svn user: $SVN_USERNAME"

@@ -59,13 +59,12 @@ RUN set -eux; \
     apt-get purge -y --auto-remove build-essential wget pkg-config; \
     apt-get clean
 
-# Create shared groups for repositories with specific GIDs
-RUN groupadd -g 1002 gitaccess && \
-    groupadd -g 1003 svnaccess
+# Create shared group for repositories with specific GID (must match other containers)
+RUN groupadd -g 1002 apache-stack
 
-# Ensure daemon user exists and add to both groups
+# Ensure daemon user exists and add to apache-stack group
 RUN useradd -u 1 -g 1 daemon 2>/dev/null || true && \
-    usermod -a -G gitaccess,svnaccess daemon
+    usermod -a -G apache-stack daemon
 
 # Create SSH directories
 RUN mkdir -p /var/run/sshd /etc/ssh/keys
