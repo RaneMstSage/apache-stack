@@ -74,27 +74,53 @@ def get_environment_var(name, default=None):
 
 def get_ssh_key_fingerprint():
     """Get the SSH key fingerprint from the current connection"""
-    # SSH doesn't directly provide this, but we can try to get it from the environment
-    # This requires sshd to be configured with: ExposeAuthInfo yes
+    # Method 1: Try SSH_USER_AUTH file
     auth_file = os.environ.get('SSH_USER_AUTH', '')
     if auth_file and os.path.exists(auth_file):
         try:
             with open(auth_file, 'r') as f:
-                for line in f:
+                content = f.read()
+                logger.info(f"SSH_USER_AUTH file content: {content}")
+                for line in content.splitlines():
                     if line.startswith('publickey '):
-                        # Extract fingerprint from the line
                         parts = line.strip().split()
-                        if len(parts) >= 2:
-                            return parts[1]
+                        if len(parts) >= 3:
+                            # We have: publickey ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK6Cir0yAdikmQ3hqSWAItkpX9hwIBO2KaV4edRmisTo
+                            key_type = parts[1]
+                            key_data = parts[2]
+                            
+                            # Convert to SHA256 fingerprint format that SSH uses
+                            import base64
+                            import hashlib
+                            try:
+                                key_bytes = base64.b64decode(key_data)
+                                fingerprint_hash = hashlib.sha256(key_bytes).digest()
+                                fingerprint = base64.b64encode(fingerprint_hash).decode('ascii').rstrip('=')
+                                fingerprint = f"SHA256:{fingerprint}"
+                                
+                                logger.info(f"Converted key to fingerprint: {fingerprint}")
+                                return fingerprint
+                            except Exception as e:
+                                logger.error(f"Error converting key to fingerprint: {e}")
+                                return None
+                            
         except Exception as e:
             logger.error(f"Error reading auth file: {e}")
+    else:
+        logger.warning(f"SSH_USER_AUTH not set or file does not exist: {auth_file}")
+
+    # Method 2: Try environment variable
+    fingerprint = os.environ.get('SSH_KEY_FINGERPRINT', '')
+    if fingerprint:
+        return fingerprint
     
-    # Alternative: Try to get from environment if set by custom sshd
-    return os.environ.get('SSH_KEY_FINGERPRINT', '')
+    logger.warning("Could not extract SSH key fingerprint")
+    return None
 
 def get_user_from_database(fingerprint=None):
     """Query Redmine database for SSH key owner"""
     if not MYSQL_AVAILABLE:
+        logger.warning("MySQL connector not available")
         return None
         
     try:
@@ -110,30 +136,34 @@ def get_user_from_database(fingerprint=None):
         cursor = conn.cursor()
         
         if fingerprint:
-            # Query by fingerprint (most reliable)
+            # Query by fingerprint - use correct table name: sage_ssh_keys
             query = """
             SELECT u.login 
-            FROM sage_ssh_keys s
-            JOIN users u ON s.user_id = u.id
-            WHERE s.fingerprint = %s AND s.active = 1
-            LIMIT 1
+            FROM users u 
+            JOIN sage_ssh_keys sk ON u.id = sk.user_id 
+            WHERE sk.fingerprint = %s AND u.status = 1 AND sk.active = 1
             """
             cursor.execute(query, (fingerprint,))
         else:
-            # Fallback: This would need more complex matching
-            # For now, return None
+            logger.warning("No fingerprint provided for database lookup")
             return None
             
         result = cursor.fetchone()
         
         if result:
-            logger.info(f"Found user from database: {result[0]}")
-            return result[0]
+            username = result[0]
+            logger.info(f"Found user '{username}' for fingerprint '{fingerprint}' in database")
+            return username
+        else:
+            logger.warning(f"No user found for fingerprint '{fingerprint}' in database")
+            return None
             
     except Exception as e:
         logger.error(f"Database error: {e}")
+        return None
     finally:
-        if 'conn' in locals() and conn:
+        if 'conn' in locals() and conn.is_connected():
+            cursor.close()
             conn.close()
     
     return None
@@ -172,8 +202,10 @@ def parse_svn_command():
     }
 
 def get_user_from_ssh_key():
+    """Get the Redmine username associated with the SSH key used for authentication"""
     fingerprint = get_ssh_key_fingerprint()
     if fingerprint:
+        logger.info(f"Using fingerprint: '{fingerprint}' for database lookup")
         db_user = get_user_from_database(fingerprint)
         if db_user:
             logger.info(f"User '{db_user}' found in Redmine database for fingerprint '{fingerprint}'")
@@ -182,6 +214,8 @@ def get_user_from_ssh_key():
             logger.warning(f"No user found in Redmine database for fingerprint '{fingerprint}'")
     else:
         logger.warning("Could not get SSH key fingerprint for database lookup")
+    
+    # No fallback - authentication must work properly
     return None
 
 def check_ldap_access(username, repo_path=None, is_write=False):

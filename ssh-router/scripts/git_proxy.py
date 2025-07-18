@@ -184,7 +184,7 @@ def get_user_from_ssh_key():
     else:
         logger.warning("Could not get SSH key fingerprint for database lookup")
     
-    # No fallback - return None to force proper authentication
+    # No fallback - authentication must work properly
     return None
 
 def check_ldap_access(username, repo_name, is_write):
