@@ -24,16 +24,16 @@ except ImportError:
 # Add import for repository configuration
 from repo_config import get_repo_config
 
-# Set up logging to both file and console for debugging
+# Change logging configuration
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('/tmp/svn_proxy.log'),
-        logging.StreamHandler()
-    ]
+    level=logging.WARNING,
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('svn_proxy')
+
+# Apply the same logging cleanup as git_proxy.py
+# Remove verbose debug logs, keep only essential warnings and errors
+# Follow the same pattern as shown above
 
 # SVN Repository base path
 SVN_REPOS_PATH = "/opt/repositories/svn"

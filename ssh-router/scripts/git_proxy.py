@@ -23,7 +23,10 @@ except ImportError:
     print("Warning: mysql.connector not available, falling back to file-based auth")
 
 # Set up logging
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 def load_environment():
@@ -43,7 +46,6 @@ def load_environment():
 
 def get_ssh_key_fingerprint():
     """Get the SSH key fingerprint from the current connection"""
-    # Method 1: Try SSH_USER_AUTH file
     auth_file = os.environ.get('SSH_USER_AUTH', '')
     if auth_file and os.path.exists(auth_file):
         try:
@@ -53,36 +55,30 @@ def get_ssh_key_fingerprint():
                     if line.startswith('publickey '):
                         parts = line.strip().split()
                         if len(parts) >= 3:
-                            # We have: publickey ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK6Cir0yAdikmQ3hqSWAItkpX9hwIBO2KaV4edRmisTo
                             key_type = parts[1]
                             key_data = parts[2]
                             
-                            # Convert to SHA256 fingerprint format that SSH uses
                             import base64
+                            import hashlib
                             try:
                                 key_bytes = base64.b64decode(key_data)
                                 fingerprint_hash = hashlib.sha256(key_bytes).digest()
                                 fingerprint = base64.b64encode(fingerprint_hash).decode('ascii').rstrip('=')
                                 fingerprint = f"SHA256:{fingerprint}"
                                 
-                                logger.info(f"Converted key to fingerprint: {fingerprint}")
                                 return fingerprint
                             except Exception as e:
                                 logger.error(f"Error converting key to fingerprint: {e}")
                                 return None
-                            
         except Exception as e:
             logger.error(f"Error reading auth file: {e}")
     else:
-        logger.warning(f"SSH_USER_AUTH not set or file does not exist: {auth_file}")
+        logger.warning(f"SSH authentication unavailable")
 
-    # Method 2: Try environment variable
     fingerprint = os.environ.get('SSH_KEY_FINGERPRINT', '')
-    if fingerprint:
-        return fingerprint
-    
-    logger.warning("Could not extract SSH key fingerprint")
-    return None
+    if not fingerprint:
+        logger.warning("SSH key fingerprint not available")
+    return fingerprint
 
 def get_user_from_database(fingerprint=None):
     """Query Redmine database for SSH key owner"""
@@ -176,14 +172,14 @@ def get_user_from_ssh_key():
     if fingerprint:
         db_user = get_user_from_database(fingerprint)
         if db_user:
-            logger.info(f"User '{db_user}' found in Redmine database for fingerprint '{fingerprint}'")
+            # Keep: logger.info(f"Access granted: {db_user}")
+            logger.info(f"Access granted: {db_user}")
             return db_user
         else:
-            logger.warning(f"No user found in Redmine database for fingerprint '{fingerprint}'")
+            logger.warning(f"Authentication failed: SSH key not found in database")
     else:
-        logger.warning("Could not get SSH key fingerprint for database lookup")
+        logger.warning("Authentication failed: Could not get SSH key fingerprint")
     
-    # No fallback - authentication must work properly
     return None
 
 def check_ldap_access(username, repo_name, is_write):
@@ -196,6 +192,8 @@ def check_ldap_access(username, repo_name, is_write):
         ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
         ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
         ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
+        
+        # Remove: logger.info(f"Checking LDAP access for user '{username}' to repo '{repo_name}' (write={is_write})")
         
         # Connect to LDAP server
         ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
@@ -212,24 +210,25 @@ def check_ldap_access(username, repo_name, is_write):
         user_result = conn.search_s(user_search_base, ldap.SCOPE_SUBTREE, user_filter, ['memberOf'])
         
         if not user_result:
-            logger.warning(f"User '{username}' not found in LDAP")
+            logger.warning(f"Access denied: User '{username}' not found in LDAP")
             return False
         
-        # Get user's groups - try memberOf first, then search groups for membership
+        # Get user's groups
         user_dn, user_attrs = user_result[0]
         user_groups = []
         
-        # Method 1: Try memberOf attribute (if LDAP has memberOf overlay)
+        # Method 1: Try memberOf attribute
         if 'memberOf' in user_attrs:
             for group_dn in user_attrs['memberOf']:
                 group_dn_str = group_dn.decode('utf-8')
                 if group_dn_str.startswith('cn='):
                     group_name = group_dn_str.split(',')[0].split('=')[1]
                     user_groups.append(group_name)
+            # Remove: logger.info(f"Found groups via memberOf: {user_groups}")
         
-        # Method 2: Search groups that have this user as member (fallback)
+        # Method 2: Search groups for membership (fallback)
         if not user_groups:
-            logger.info(f"No memberOf found, searching groups for user membership")
+            # Remove: logger.info(f"No memberOf found, searching groups for user membership")
             user_full_dn = user_dn
             group_search_base = f"ou=Groups,{ldap_base_dn}"
             group_filter = f"(member={user_full_dn})"
@@ -239,8 +238,9 @@ def check_ldap_access(username, repo_name, is_write):
                 if 'cn' in group_attrs:
                     group_name = group_attrs['cn'][0].decode('utf-8')
                     user_groups.append(group_name)
+            # Remove: logger.info(f"Found groups via member search: {user_groups}")
         
-        logger.info(f"User '{username}' LDAP groups: {user_groups}")
+        # Remove: logger.info(f"User '{username}' LDAP groups: {user_groups}")
         
         # Get required groups from configuration
         config = get_repo_config()
@@ -248,20 +248,19 @@ def check_ldap_access(username, repo_name, is_write):
         
         # If no groups required (e.g., personal repo owner), grant access
         if not required_groups:
-            logger.info(f"Repository access granted for user '{username}' (no group restrictions)")
+            # Remove: logger.info(f"Repository access granted for user '{username}' (no group restrictions)")
+            pass
         else:
             # Check if user has required LDAP groups
             has_ldap_access = any(group in user_groups for group in required_groups)
             if not has_ldap_access:
-                logger.error(f"Access denied: User '{username}' missing required groups for '{repo_name}'")
+                logger.warning(f"Access denied: User '{username}' missing required groups for '{repo_name}': {required_groups}")
                 return False
         
-        # Also check local file system group membership
-        # NOTE: Check SSH system user (git/svn), not LDAP user, for local groups
+        # Check local file system group membership
         ssh_user = os.environ.get('USER', 'unknown')
 
         try:
-            # Get SSH system user info (git, svn, admin) - these exist in container
             user_info = pwd.getpwnam(ssh_user)
             local_groups = [g.gr_name for g in grp.getgrall() if ssh_user in g.gr_mem]
             
@@ -269,12 +268,12 @@ def check_ldap_access(username, repo_name, is_write):
             primary_group = grp.getgrgid(user_info.pw_gid)
             local_groups.append(primary_group.gr_name)
             
-            # Check if SSH system user is in apache-stack group (for file system permissions)
+            # Check if SSH system user is in apache-stack group
             if 'apache-stack' not in local_groups:
-                logger.warning(f"SSH user '{ssh_user}' not in apache-stack group. Local groups: {local_groups}")
+                logger.warning(f"Access denied: SSH user '{ssh_user}' not in apache-stack group")
                 return False
             
-            logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
+            # Remove: logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
             
         except (KeyError, OSError) as e:
             logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")
