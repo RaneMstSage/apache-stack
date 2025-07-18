@@ -82,11 +82,12 @@ def get_user_from_database(fingerprint=None):
         
         if fingerprint:
             # Query by fingerprint (most reliable)
+            # FIXED: Changed from sagemine_ssh_keys to sage_ssh_keys
             query = """
             SELECT u.login 
             FROM users u 
-            JOIN sagemine_ssh_keys sk ON u.id = sk.user_id 
-            WHERE sk.fingerprint = %s AND u.status = 1
+            JOIN sage_ssh_keys sk ON u.id = sk.user_id 
+            WHERE sk.fingerprint = %s AND u.status = 1 AND sk.active = 1
             """
             cursor.execute(query, (fingerprint,))
         else:
