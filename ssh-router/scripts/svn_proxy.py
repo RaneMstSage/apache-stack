@@ -21,6 +21,9 @@ except ImportError:
     MYSQL_AVAILABLE = False
     print("Warning: mysql.connector not available, falling back to file-based auth")
 
+# Add import for repository configuration
+from repo_config import get_repo_config
+
 # Set up logging to both file and console for debugging
 logging.basicConfig(
     level=logging.INFO,
@@ -222,14 +225,14 @@ def check_ldap_access(username, repo_path=None, is_write=False):
     """Check if user has access to SVN repository via LDAP groups AND local groups"""
     
     try:
-        # Load LDAP configuration (same as git_proxy.py)
+        # Load LDAP configuration
         ldap_host = os.environ.get('LDAP_HOST', 'openldap')
         ldap_port = int(os.environ.get('LDAP_PORT', '389'))
         ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
         ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
         ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
         
-        logger.info(f"Checking LDAP access for user '{username}' to SVN repo '{repo_path}' (write={is_write})")
+        logger.info(f"Checking LDAP access for user '{username}' to SVN path '{repo_path}' (write={is_write})")
         
         # Connect to LDAP server
         ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
@@ -249,7 +252,7 @@ def check_ldap_access(username, repo_path=None, is_write=False):
             logger.warning(f"User '{username}' not found in LDAP")
             return False
         
-        # Get user's groups using member search (same as git_proxy.py)
+        # Get user's groups - try memberOf first, then search groups for membership
         user_dn, user_attrs = user_result[0]
         user_groups = []
         
@@ -278,75 +281,26 @@ def check_ldap_access(username, repo_path=None, is_write=False):
         
         logger.info(f"User '{username}' LDAP groups: {user_groups}")
         
-        # SVN Repository-specific group mapping (matching Apache config)
-        required_groups = []
-        repo_name = None
+        # Get required groups from configuration
+        config = get_repo_config()
+        required_groups = config.get_svn_access_groups(repo_path, username, is_write)
         
-        if repo_path:
-            # Extract repository collection from path
-            path_parts = repo_path.strip('/').split('/')
-            if len(path_parts) > 0:
-                repo_name = path_parts[0]  # First part is the collection name
-        
-        # Map SVN collections to LDAP groups (based on your Apache config)
-        if repo_name in ['alt_night']:
-            # Personal repos - check specific user OR admin
-            if username == 'alt_night':
-                logger.info(f"Personal repository access granted for user '{username}'")
-            else:
-                required_groups = ['admins']
-        elif repo_name in ['kschuetz']:
-            # Personal repos - check specific user OR admin  
-            if username == 'rane_mstsage':
-                logger.info(f"Personal repository access granted for user '{username}'")
-            else:
-                required_groups = ['admins']
-        elif repo_name in ['wagganjr']:
-            # Personal repos - check specific user OR admin
-            if username == 'wagganjr':
-                logger.info(f"Personal repository access granted for user '{username}'")
-            else:
-                required_groups = ['admins']
-        elif repo_name in ['zupaxis']:
-            # Personal repos - check specific user OR admin
-            if username == 'ZupAxis':
-                logger.info(f"Personal repository access granted for user '{username}'")
-            else:
-                required_groups = ['admins']
-        elif repo_name in ['fullsail']:
-            # Educational repositories
-            required_groups = ['proj-fullsail', 'admins']
-        elif repo_name in ['cgprojects', 'smashingpumpkins']:
-            # PumpkinHead Studios projects
-            required_groups = ['org-pumpkinhead', 'admins']
-        elif repo_name in ['codingprojects', 'kineticheart']:
-            # MstSage Entertainment projects
-            required_groups = ['org-mstsage', 'admins']
-        elif repo_name in ['gamedev']:
-            # Game development projects
-            required_groups = ['proj-cgprojects', 'admins']
-        elif repo_name in ['tutorials']:
-            # Tutorial repositories
-            required_groups = ['proj-tutorials', 'admins']
+        # If no groups required (e.g., personal collection owner), grant access
+        if not required_groups:
+            logger.info(f"SVN collection access granted for user '{username}' (no group restrictions)")
         else:
-            # Default: basic SVN access OR admin
-            required_groups = ['svn-users', 'admins']
-            if is_write:
-                required_groups = ['svn-developers', 'admins']
-
-        # Check if user has required LDAP groups (skip for personal repo owner)
-        if required_groups:  # Only check if we have groups to check
+            # Check if user has required LDAP groups
             has_ldap_access = any(group in user_groups for group in required_groups)
             if not has_ldap_access:
-                logger.warning(f"User '{username}' missing required LDAP groups for '{repo_name}': {required_groups}")
+                logger.error(f"Access denied: User '{username}' not authorized for SVN path '{repo_path}'")
                 return False
         
         # Also check local file system group membership
-        # NOTE: Check SSH system user (svn), not LDAP user, for local groups
+        # NOTE: Check SSH system user (git/svn), not LDAP user, for local groups
         ssh_user = os.environ.get('USER', 'unknown')
 
         try:
-            # Get SSH system user info (svn, git, admin) - these exist in container
+            # Get SSH system user info (git, svn, admin) - these exist in container
             user_info = pwd.getpwnam(ssh_user)
             local_groups = [g.gr_name for g in grp.getgrall() if ssh_user in g.gr_mem]
             

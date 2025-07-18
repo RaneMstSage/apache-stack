@@ -12,6 +12,7 @@ import ldap
 import grp
 import pwd
 import hashlib
+from repo_config import get_repo_config
 
 # Add MySQL import
 try:
@@ -22,7 +23,7 @@ except ImportError:
     print("Warning: mysql.connector not available, falling back to file-based auth")
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def load_environment():
@@ -48,7 +49,6 @@ def get_ssh_key_fingerprint():
         try:
             with open(auth_file, 'r') as f:
                 content = f.read()
-                logger.info(f"SSH_USER_AUTH file content: {content}")
                 for line in content.splitlines():
                     if line.startswith('publickey '):
                         parts = line.strip().split()
@@ -174,7 +174,6 @@ def get_user_from_ssh_key():
     """Get the Redmine username associated with the SSH key used for authentication"""
     fingerprint = get_ssh_key_fingerprint()
     if fingerprint:
-        logger.info(f"Using fingerprint: '{fingerprint}' for database lookup")
         db_user = get_user_from_database(fingerprint)
         if db_user:
             logger.info(f"User '{db_user}' found in Redmine database for fingerprint '{fingerprint}'")
@@ -197,8 +196,6 @@ def check_ldap_access(username, repo_name, is_write):
         ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
         ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
         ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
-        
-        logger.info(f"Checking LDAP access for user '{username}' to repo '{repo_name}' (write={is_write})")
         
         # Connect to LDAP server
         ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
@@ -229,7 +226,6 @@ def check_ldap_access(username, repo_name, is_write):
                 if group_dn_str.startswith('cn='):
                     group_name = group_dn_str.split(',')[0].split('=')[1]
                     user_groups.append(group_name)
-            logger.info(f"Found groups via memberOf: {user_groups}")
         
         # Method 2: Search groups that have this user as member (fallback)
         if not user_groups:
@@ -243,40 +239,21 @@ def check_ldap_access(username, repo_name, is_write):
                 if 'cn' in group_attrs:
                     group_name = group_attrs['cn'][0].decode('utf-8')
                     user_groups.append(group_name)
-            logger.info(f"Found groups via member search: {user_groups}")
         
         logger.info(f"User '{username}' LDAP groups: {user_groups}")
         
-        # Check Git access requirements based on repository
-        required_groups = []
+        # Get required groups from configuration
+        config = get_repo_config()
+        required_groups = config.get_git_access_groups(repo_name, username, is_write)
         
-        # Repository-specific group mapping (matching Apache config)
-        if repo_name in ['apache-stack', 'openwebui-pipelines', 'openwebui-stack']:
-            required_groups = ['proj-infrastructure', 'admins']
-        elif repo_name in ['sage-repo-viewer', 'sage_checkout_plugin', 'SageDark', 'sagemine_ssh_keys']:
-            required_groups = ['proj-mstsage-tools', 'admins']
-        elif repo_name == 'Archmage':
-            required_groups = ['proj-fullsail', 'admins']
-        elif repo_name in ['UnityRPG', 'complete-unity-3d-dev-csharp']:
-            required_groups = ['proj-gamedev', 'admins']
-        elif repo_name in ['SchuetzKenneth_VFX_Unity', 'first-repo']:
-            # Personal repos - check specific user OR admin
-            if username == 'rane_mstsage':
-                logger.info(f"Personal repository access granted for user '{username}'")
-                # Still need to check local file system access below
-            else:
-                required_groups = ['admins']  # Only admins can access others' personal repos
+        # If no groups required (e.g., personal repo owner), grant access
+        if not required_groups:
+            logger.info(f"Repository access granted for user '{username}' (no group restrictions)")
         else:
-            # Default: basic git access OR admin
-            required_groups = ['git-users', 'admins']
-            if is_write:
-                required_groups = ['git-developers', 'admins']
-
-        # Check if user has required LDAP groups (skip for personal repo owner)
-        if required_groups:  # Only check if we have groups to check
+            # Check if user has required LDAP groups
             has_ldap_access = any(group in user_groups for group in required_groups)
             if not has_ldap_access:
-                logger.warning(f"User '{username}' missing required LDAP groups for '{repo_name}': {required_groups}")
+                logger.error(f"Access denied: User '{username}' missing required groups for '{repo_name}'")
                 return False
         
         # Also check local file system group membership
