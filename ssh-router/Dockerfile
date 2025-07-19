@@ -1,5 +1,4 @@
 FROM debian:bookworm-slim
-
 # Install SSH server, client, Git, and LDAP tools
 RUN apt-get update && apt-get install -y \
     openssh-server \
@@ -14,10 +13,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Python MySQL connector via pip
-RUN pip3 install mysql-connector-python --break-system-packages
-
+# Install Python MySQL connector and requests via pip
+RUN pip3 install mysql-connector-python requests --break-system-packages
 # Build and install Subversion 1.14.5 (same as Redmine)
 RUN set -eux; \
     apt-get update; \
@@ -61,42 +58,32 @@ RUN set -eux; \
     # Remove build dependencies to keep image size down
     apt-get purge -y --auto-remove build-essential wget pkg-config; \
     apt-get clean
-
 # Create shared group for repositories with specific GID (must match other containers)
 RUN groupadd -g 1002 apache-stack
-
 # Ensure daemon user exists and add to apache-stack group
 RUN useradd -u 1 -g 1 daemon 2>/dev/null || true && \
     usermod -a -G apache-stack daemon
-
 # Configure Git to trust all repository directories
 RUN git config --system --add safe.directory '*'
-
 # Create SSH directories
 RUN mkdir -p /var/run/sshd /etc/ssh/keys
-
 # Copy configuration and scripts
 COPY sshd_config /etc/ssh/sshd_config
 COPY scripts/ /opt/scripts/
 COPY entrypoint.sh /entrypoint.sh
-
 # Fix line endings and set permissions
 RUN sed -i 's/\r$//' /entrypoint.sh && \
     sed -i 's/\r$//' /opt/scripts/*.py && \
     chmod +x /opt/scripts/*.py /entrypoint.sh
-
 # Generate host keys
 RUN ssh-keygen -A
-
 # Create log directory and set permissions
 RUN mkdir -p /var/log && \
     chmod 755 /var/log && \
     touch /var/log/svn_proxy.log /var/log/git_proxy.log && \
     chmod 666 /var/log/svn_proxy.log /var/log/git_proxy.log
-
 # Expose SSH port
 EXPOSE 22
-
 # Use entrypoint to create user dynamically
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
