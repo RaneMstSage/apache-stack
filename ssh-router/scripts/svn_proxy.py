@@ -365,6 +365,12 @@ def execute_svn_command(command_info):
         if "--root=" not in command:
             command = f"{command} --root={svn_repos_path}"
 
+        # CRITICAL FIX: Add the authenticated username to the command
+        if username and "--tunnel-user=" not in command:
+            # Insert --tunnel-user after -t flag
+            command = command.replace(" -t", f" -t --tunnel-user={username}")
+            logger.info(f"Added tunnel user: {username}")
+
         logger.info(f"Running command: {command}")
 
         # Execute and pass through stdin/stdout/stderr
