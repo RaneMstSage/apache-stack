@@ -183,6 +183,12 @@ RUN git config --system --add safe.directory '*'
 # Configure GIt LFS globablly
 RUN git lfs install --system
 
+# Create Git LFS Storage directory
+RUN mkdir -p /usr/local/apache2/git-lfs-storage && \
+    chown -R apache:apache-stack /usr/local/apache2/git-lfs-storage && \
+    chmod -R 775 /usr/local/apache2/git-lfs-storage && \
+    find /usr/local/apache2/git-lfs-storage -type d -exec chmod g+s {} \;
+
 # Configure Apache to run as apache user with apache-stack group
 RUN sed -i 's/^User.*/User apache/' /usr/local/apache2/conf/httpd.conf && \
     sed -i 's/^Group.*/Group apache-stack/' /usr/local/apache2/conf/httpd.conf

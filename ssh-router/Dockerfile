@@ -75,6 +75,12 @@ RUN git config --system --add safe.directory '*'
 # Configure Git LFS globally
 RUN git lfs install --system
 
+# Create Git LFS storage directory
+RUN mkdir -p /usr/local/git-lfs-storage && \
+    chown -R daemon:apache-stack /usr/local/git-lfs-storage && \
+    chmod -R 775 /usr/local/git-lfs-storage && \
+    find /usr/local/git-lfs-storage -type d -exec chmod g+s {} \;
+
 # Create SSH directories
 RUN mkdir -p /var/run/sshd /etc/ssh/keys
 

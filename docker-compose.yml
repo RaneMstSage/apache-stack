@@ -94,6 +94,7 @@ services:
       # - git_repos:/usr/local/apache2/git
       - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
       - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
+      - ${WSL_GIT_LFS_PATH}:/usr/local/apache2/git-lfs-storage
     restart: unless-stopped
     networks:
       - apache-network
@@ -126,6 +127,7 @@ services:
       # - git_repos:/usr/local/apache2/git
       - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
       - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
+      - ${WSL_GIT_LFS_PATH}:/usr/local/apache2/git-lfs-storage
     restart: unless-stopped
     networks:
       - apache-network
@@ -158,6 +160,7 @@ services:
       # - git_repos:/usr/local/apache2/git
       - ${WSL_SVN_REPOS_PATH}:/usr/local/apache2/svn
       - ${WSL_GIT_REPOS_PATH}:/usr/local/apache2/git
+      - ${WSL_GIT_LFS_PATH}:/usr/local/apache2/git-lfs-storage
     restart: unless-stopped
     networks:
       - apache-network
@@ -311,6 +314,7 @@ services:
       - ${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf:/opt/config/repo-access.conf:ro
       # Git repositories
       - ${WSL_GIT_REPOS_PATH}:/opt/repositories/git:rw
+      - ${WSL_GIT_LFS_PATH}:/usr/local/git-lfs-storage
       # SVN repositories
       - ${WSL_SVN_REPOS_PATH}:/opt/repositories/svn:rw
     networks:
