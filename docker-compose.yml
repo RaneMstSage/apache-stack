@@ -352,28 +352,30 @@ services:
 
   # Git LFS Server
   giftless:
-    build: https://github.com/datopian/giftless.git
-    container_name: giftless
-    environment:
-      - TZ=America/New_York
-      - GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
-    ports:
-      - "5000:5000"
-    volumes:
-      - ${DOCKER_VOLUMES_BASE}/giftless/giftless.yaml:/etc/giftless.yaml:ro
-      - ${DOCKER_VOLUMES_BASE}/giftless/apache_proxy.py:/app/giftless/auth/apache_proxy.py:ro
-      - ${WSL_GIT_LFS_PATH}:/lfs-storage
-    networks:
-      - apache-network
-    restart: unless-stopped
-    # Override the default CMD to use HTTP instead of socket
-    command: [ "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app", "--http", "0.0.0.0:5000" ]
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+     build: ./giftless-source
+     container_name: giftless
+     environment:
+       - TZ=America/New_York
+       - GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
+       - APACHE_SECRET=${LFS_SECRET}  # Add this
+     ports:
+       # - "5000:5000"
+       - "127.0.0.1:5000:5000"  # Only accessible from the Docker host
+     volumes:
+       - ${DOCKER_VOLUMES_BASE}/giftless/config.yaml:/etc/giftless.yaml:ro
+       - ${DOCKER_VOLUMES_BASE}/giftless/apache_proxy.py:/app/giftless/auth/apache_proxy.py:ro
+       - ${WSL_GIT_LFS_PATH}:/lfs-storage
+     networks:
+       - apache-network
+     restart: unless-stopped
+     # Override the default CMD to use HTTP instead of socket
+     command: ["--http", "0.0.0.0:5000", "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app"]
+     healthcheck:
+       test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
+       interval: 30s
+       timeout: 10s
+       retries: 3
+       start_period: 10s
 
 networks:
   apache-network:

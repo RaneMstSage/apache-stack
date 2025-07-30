@@ -1,0 +1,12 @@
+# Use our Apache proxy authenticator with factory function
+AUTH_PROVIDERS:
+  - factory: giftless.auth.apache_proxy:factory
+    # options: {}  # Add any options here if needed
+
+TRANSFER_ADAPTERS:
+  basic:
+    factory: giftless.transfer.basic_streaming:factory
+    options:
+      storage_class: giftless.storage.local_storage:LocalStorage
+      storage_options:
+        path: /data/lfs-storage
