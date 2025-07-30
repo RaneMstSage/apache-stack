@@ -367,9 +367,6 @@ services:
     networks:
       - apache-network
     restart: unless-stopped
-    command: >
-      -M -T --threads 2 -p 2 --manage-script-name --callable app
-      --http 0.0.0.0:5000
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
       interval: 30s
