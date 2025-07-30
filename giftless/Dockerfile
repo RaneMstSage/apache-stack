@@ -18,7 +18,7 @@ RUN git clone https://github.com/datopian/giftless.git /tmp/giftless && \
 COPY apache_proxy.py /app/giftless/auth/apache_proxy.py
 
 # Copy the config
-COPY config.yaml /etc/giftless.yaml
+COPY giftless.yaml /etc/giftless.yaml
 
 EXPOSE 5000
 
