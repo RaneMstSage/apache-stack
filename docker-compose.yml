@@ -358,15 +358,19 @@ services:
       - TZ=America/New_York
       - GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
     ports:
-      - "5000:5000"  # Internal port for LFS API
+      - "5000:5000"
     volumes:
       - ${DOCKER_VOLUMES_BASE}/giftless/config.yaml:/etc/giftless.yaml:ro
       - ${WSL_GIT_LFS_PATH}:/data/lfs-storage
     networks:
       - apache-network
     restart: unless-stopped
+    # Add the proper command to run in HTTP mode
+    command: >
+      -M -T --threads 2 -p 2 --manage-script-name --callable app
+      --http 0.0.0.0:5000
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:5000/heartbeat" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
       interval: 30s
       timeout: 10s
       retries: 3
