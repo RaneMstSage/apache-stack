@@ -20,5 +20,9 @@ RUN pip install --no-cache-dir uwsgi
 
 EXPOSE 5000
 
-# Run with uWSGI
-CMD ["uwsgi", "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app", "--http", "0.0.0.0:5000", "--module", "giftless.wsgi:app"]
+# Set Python path and environment
+ENV PYTHONPATH=/app
+ENV GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
+
+# Run with uWSGI - using the correct module path
+CMD ["uwsgi", "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app", "--http", "0.0.0.0:5000", "--module", "giftless.app:init_app()"]
