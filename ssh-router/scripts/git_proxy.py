@@ -333,15 +333,11 @@ def execute_git_command(command, repo_name):
         print(f"Error: '{repo_name}' is not a valid Git repository.")
         sys.exit(1)
     
-    # Set up LFS environment
-    lfs_url = setup_lfs_environment(repo_name)
-
     # Build the command to execute with LFS configuration
     # For git-upload-pack and git-receive-pack, we need to pass the LFS URL
     if command in ['git-upload-pack', 'git-receive-pack']:
-        # Use git with -c option to pass LFS configuration
-        # ADD THIS CONFIG to force SSH LFS protocol
-        git_cmd = ['git', '-c', f'lfs.url={lfs_url}', '-c', 'lfs.sshtransfer=always', command.replace('git-', ''), repo_full_path]
+        # Use SSH LFS protocol - no URL needed!
+        git_cmd = ['git', '-c', 'lfs.sshtransfer=always', command.replace('git-', ''), repo_full_path]
     else:
         # For other commands, execute as-is
         git_cmd = [command, repo_full_path]
