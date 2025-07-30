@@ -378,7 +378,7 @@ services:
 
   git-lfs-transfer:
     build:
-      context: ${DOCKER_VOLUMES_BASE}/git-lfs-transfer
+      context: ./git-lfs-transfer
       dockerfile: Dockerfile
     container_name: git-lfs-transfer
     environment:
