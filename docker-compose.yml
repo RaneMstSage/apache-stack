@@ -376,6 +376,19 @@ services:
       retries: 3
       start_period: 10s
 
+  git-lfs-transfer:
+    build:
+      context: ${DOCKER_VOLUMES_BASE}/git-lfs-transfer
+      dockerfile: Dockerfile
+    container_name: git-lfs-transfer
+    environment:
+      - TZ=America/New_York
+    volumes:
+      - ${WSL_GIT_LFS_PATH}:/data/lfs-storage:rw
+    networks:
+      - apache-network
+    restart: unless-stopped
+
 networks:
   apache-network:
     driver: bridge
