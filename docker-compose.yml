@@ -352,8 +352,7 @@ services:
 
   # Git LFS Server
   giftless:
-    build: ./giftless  # Add this line
-    # image: datopian/giftless:latest  # Comment out or remove this line
+    build: https://github.com/datopian/giftless.git
     container_name: giftless
     environment:
       - TZ=America/New_York
@@ -361,12 +360,14 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ${DOCKER_VOLUMES_BASE}/giftless/config.yaml:/etc/giftless.yaml:ro
+      - ${DOCKER_VOLUMES_BASE}/giftless/giftless.yaml:/etc/giftless.yaml:ro
       - ${DOCKER_VOLUMES_BASE}/giftless/apache_proxy.py:/app/giftless/auth/apache_proxy.py:ro
-      - ${WSL_GIT_LFS_PATH}:/data/lfs-storage
+      - ${WSL_GIT_LFS_PATH}:/lfs-storage
     networks:
       - apache-network
     restart: unless-stopped
+    # Override the default CMD to use HTTP instead of socket
+    command: [ "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app", "--http", "0.0.0.0:5000" ]
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000" ]
       interval: 30s
