@@ -169,17 +169,16 @@ def parse_git_command():
 def setup_lfs_environment(repo_name):
     """Set up Git LFS environment variables for the repository"""
     # Build the LFS URL based on the repository path
-    # Handle both org/repo and repo formats
-    lfs_base_url = "https://code.mstsage.com/git"
+    lfs_base_url = "https://code.mstsage.com/lfs"
 
-    # Ensure repo_name has .git suffix for the URL
-    if not repo_name.endswith('.git'):
-        repo_full = f"{repo_name}.git"
+    # Remove .git suffix if present for the LFS URL
+    if repo_name.endswith('.git'):
+        repo_clean = repo_name[:-4]
     else:
-        repo_full = repo_name
+        repo_clean = repo_name
 
-    # IMPORTANT: Include /git/ in the URL path
-    lfs_url = f"{lfs_base_url}/{repo_full}/info/lfs"
+    # Set the LFS URL to match nginx configuration
+    lfs_url = f"{lfs_base_url}/{repo_clean}"
 
     # Set LFS environment variables
     os.environ['GIT_LFS_SKIP_SMUDGE'] = '0'  # Enable LFS
