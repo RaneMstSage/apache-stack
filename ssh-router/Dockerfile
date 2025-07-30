@@ -15,6 +15,13 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Add this section after the Git LFS installation
+# Install Go and git-lfs-transfer for SSH LFS support
+RUN apt-get update && apt-get install -y golang-go && \
+    go install github.com/charmbracelet/git-lfs-transfer@latest && \
+    cp /root/go/bin/git-lfs-transfer /usr/local/bin/ && \
+    chmod +x /usr/local/bin/git-lfs-transfer
+
 # Install Python MySQL connector and requests via pip
 RUN pip3 install mysql-connector-python requests --break-system-packages
 
