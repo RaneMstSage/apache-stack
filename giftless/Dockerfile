@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone and install latest Giftless from GitHub
@@ -13,6 +14,9 @@ RUN git clone https://github.com/datopian/giftless.git /tmp/giftless && \
     pip install --no-cache-dir -e . && \
     cp -r /tmp/giftless/giftless /app/ && \
     rm -rf /tmp/giftless
+
+# Install uWSGI
+RUN pip install --no-cache-dir uwsgi
 
 EXPOSE 5000
 
