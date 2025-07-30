@@ -12,7 +12,7 @@ from giftless.auth.identity import DefaultIdentity
 LOG = logging.getLogger(__name__)
 
 # Wildcard scope for full read/write access
-ALL_OBJECTS_RW = ["obj:*/*:*"]  # Simplified: equivalent to ["obj:*/*:read", "obj:*/*:write"]
+ALL_OBJECTS_RW = ["obj:*/*:*"]  # Full wildcard for read/write on all repos
 
 class ApacheProxyAuthenticator(Authenticator):
     """Accept X-Remote-User from Apache or Basic-Auth (SSH-to-HTTP LFS)"""
@@ -71,12 +71,15 @@ class ApacheProxyAuthenticator(Authenticator):
             # else:
             #     scopes = ALL_OBJECTS_RW
 
-            return DefaultIdentity(
+            identity = DefaultIdentity(
                 id=user,
                 name=user,
-                email=f"{user}@local",
-                scopes=ALL_OBJECTS_RW  # Trust Apache's access control
+                email=f"{user}@local"
             )
+            # Older versions of giftless do not accept the 'scopes' argument
+            # on the constructor, so assign it manually.
+            identity.scopes = ALL_OBJECTS_RW  # Trust Apache's access control
+            return identity
 
         # No authentication - return None to allow chain processing
         return None
