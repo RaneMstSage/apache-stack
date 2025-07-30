@@ -14,16 +14,7 @@ RUN git clone https://github.com/datopian/giftless.git /tmp/giftless && \
     cp -r /tmp/giftless/giftless /app/ && \
     rm -rf /tmp/giftless
 
-# Copy your custom authenticator
-COPY apache_proxy.py /app/giftless/auth/apache_proxy.py
-
-# Copy the config
-COPY giftless.yaml /etc/giftless.yaml
-
 EXPOSE 5000
-
-# Set environment variable for config
-ENV GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
 
 # Run with uWSGI
 CMD ["uwsgi", "-M", "-T", "--threads", "2", "-p", "2", "--manage-script-name", "--callable", "app", "--http", "0.0.0.0:5000", "--module", "giftless.wsgi:app"]
