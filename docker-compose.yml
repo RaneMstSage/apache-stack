@@ -352,7 +352,8 @@ services:
 
   # Git LFS Server
   giftless:
-    image: datopian/giftless:latest
+    build: ./giftless  # Add this line
+    # image: datopian/giftless:latest  # Comment out or remove this line
     container_name: giftless
     environment:
       - TZ=America/New_York

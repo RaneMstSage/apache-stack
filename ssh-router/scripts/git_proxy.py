@@ -144,26 +144,36 @@ def parse_git_command():
     # git-upload-pack '/path/to/repo.git'  (for clone/fetch)
     # git-receive-pack '/path/to/repo.git' (for push)
     # git-upload-archive '/path/to/repo.git' (for archive)
-    
-    # Parse the command
+    # git-lfs-transfer '/path/to/repo.git' upload/download (for LFS SSH)
+    # git-lfs-authenticate '/path/to/repo.git' upload/download (for LFS HTTP)
+
+    # Parse standard Git commands
     match = re.match(r"^(git-upload-pack|git-receive-pack|git-upload-archive)\s+'?/?([^']+)'?$", ssh_command)
-    
-    if not match:
-        print(f"Error: Invalid Git command: {ssh_command}")
-        sys.exit(1)
-    
-    command = match.group(1)
-    repo_path = match.group(2)
-    
+
+    if match:
+        command = match.group(1)
+        repo_path = match.group(2)
+        is_write = (command == 'git-receive-pack')
+    else:
+        # Try LFS commands - Allow optional --remote flags anywhere
+        match = re.match(r"^(git-lfs-transfer|git-lfs-authenticate)\s+(?:--remote=\S+\s+)?'?(?:/)?([^'\s]+)'?\s+(upload|download)(?:\s+--\S+)*\s*$", ssh_command)
+        if match:
+            command = match.group(1)
+            repo_path = match.group(2)
+            operation = match.group(3)
+            is_write = (operation == 'upload')
+            # Store operation for later use
+            os.environ['GIT_LFS_OPERATION'] = operation
+        else:
+            print(f"Error: Invalid Git command: {ssh_command}")
+            sys.exit(1)
+
     # Remove .git suffix if present for consistency
     if repo_path.endswith('.git'):
         repo_name = repo_path[:-4]
     else:
         repo_name = repo_path
-    
-    # Determine if this is a read or write operation
-    is_write = (command == 'git-receive-pack')
-    
+
     return command, repo_name, repo_path, is_write
 
 def setup_lfs_environment(repo_name):
@@ -201,12 +211,12 @@ def get_user_from_ssh_key():
             logger.warning(f"Authentication failed: SSH key not found in database")
     else:
         logger.warning("Authentication failed: Could not get SSH key fingerprint")
-    
+
     return None
 
 def check_ldap_access(username, repo_name, is_write):
     """Check if user has access to repository via LDAP groups AND local groups"""
-    
+
     try:
         # Load LDAP configuration
         ldap_host = os.environ.get('LDAP_HOST', 'openldap')
@@ -214,31 +224,31 @@ def check_ldap_access(username, repo_name, is_write):
         ldap_base_dn = os.environ.get('LDAP_BASE_DN', 'dc=mstsage,dc=com')
         ldap_bind_dn = os.environ.get('LDAP_BIND_DN', 'cn=admin,dc=mstsage,dc=com')
         ldap_bind_password = os.environ.get('LDAP_BIND_PASSWORD', '')
-        
+
         # Remove: logger.info(f"Checking LDAP access for user '{username}' to repo '{repo_name}' (write={is_write})")
-        
+
         # Connect to LDAP server
         ldap_uri = f"ldap://{ldap_host}:{ldap_port}"
         conn = ldap.initialize(ldap_uri)
         conn.set_option(ldap.OPT_REFERRALS, 0)
         conn.protocol_version = ldap.VERSION3
-        
+
         # Bind with admin credentials
         conn.simple_bind_s(ldap_bind_dn, ldap_bind_password)
-        
+
         # Search for the user
         user_search_base = f"ou=Users,{ldap_base_dn}"
         user_filter = f"(uid={username})"
         user_result = conn.search_s(user_search_base, ldap.SCOPE_SUBTREE, user_filter, ['memberOf'])
-        
+
         if not user_result:
             logger.warning(f"Access denied: User '{username}' not found in LDAP")
             return False
-        
+
         # Get user's groups
         user_dn, user_attrs = user_result[0]
         user_groups = []
-        
+
         # Method 1: Try memberOf attribute
         if 'memberOf' in user_attrs:
             for group_dn in user_attrs['memberOf']:
@@ -247,7 +257,7 @@ def check_ldap_access(username, repo_name, is_write):
                     group_name = group_dn_str.split(',')[0].split('=')[1]
                     user_groups.append(group_name)
             # Remove: logger.info(f"Found groups via memberOf: {user_groups}")
-        
+
         # Method 2: Search groups for membership (fallback)
         if not user_groups:
             # Remove: logger.info(f"No memberOf found, searching groups for user membership")
@@ -255,19 +265,19 @@ def check_ldap_access(username, repo_name, is_write):
             group_search_base = f"ou=Groups,{ldap_base_dn}"
             group_filter = f"(member={user_full_dn})"
             group_results = conn.search_s(group_search_base, ldap.SCOPE_SUBTREE, group_filter, ['cn'])
-            
+
             for group_dn, group_attrs in group_results:
                 if 'cn' in group_attrs:
                     group_name = group_attrs['cn'][0].decode('utf-8')
                     user_groups.append(group_name)
             # Remove: logger.info(f"Found groups via member search: {user_groups}")
-        
+
         # Remove: logger.info(f"User '{username}' LDAP groups: {user_groups}")
-        
+
         # Get required groups from configuration
         config = get_repo_config()
         required_groups = config.get_git_access_groups(repo_name, username, is_write)
-        
+
         # If no groups required (e.g., personal repo owner), grant access
         if not required_groups:
             # Remove: logger.info(f"Repository access granted for user '{username}' (no group restrictions)")
@@ -278,32 +288,32 @@ def check_ldap_access(username, repo_name, is_write):
             if not has_ldap_access:
                 logger.warning(f"Access denied: User '{username}' missing required groups for '{repo_name}': {required_groups}")
                 return False
-        
+
         # Check local file system group membership
         ssh_user = os.environ.get('USER', 'unknown')
 
         try:
             user_info = pwd.getpwnam(ssh_user)
             local_groups = [g.gr_name for g in grp.getgrall() if ssh_user in g.gr_mem]
-            
+
             # Add user's primary group
             primary_group = grp.getgrgid(user_info.pw_gid)
             local_groups.append(primary_group.gr_name)
-            
+
             # Check if SSH system user is in apache-stack group
             if 'apache-stack' not in local_groups:
                 logger.warning(f"Access denied: SSH user '{ssh_user}' not in apache-stack group")
                 return False
-            
+
             # Remove: logger.info(f"LDAP user '{username}' authorized, SSH user '{ssh_user}' has file system access")
-            
+
         except (KeyError, OSError) as e:
             logger.error(f"Error checking local groups for SSH user '{ssh_user}': {str(e)}")
             return False
 
         conn.unbind_s()
         return True
-        
+
     except ldap.LDAPError as e:
         logger.error(f"LDAP error for user '{username}': {str(e)}")
         return False
@@ -313,31 +323,49 @@ def check_ldap_access(username, repo_name, is_write):
 
 def execute_git_command(command, repo_name):
     """Execute the Git command on the actual repository"""
-    
+
     # Get the Git repository base path
     git_repos_path = os.environ.get('GIT_REPOS_PATH', '/opt/repositories/git')
-    
+
     # Build the full repository path
     repo_full_path = os.path.join(git_repos_path, f"{repo_name}.git")
-    
+
     # Repository must exist - do not auto-create
     if not os.path.exists(repo_full_path):
         logger.error(f"Repository not found: {repo_name}")
         print(f"Error: Repository '{repo_name}' does not exist.")
         print("Repositories must be created by administrators.")
         sys.exit(1)
-    
+
     # Verify it's a valid Git repository
     if not os.path.exists(os.path.join(repo_full_path, 'config')):
         logger.error(f"Invalid Git repository: {repo_name}")
         print(f"Error: '{repo_name}' is not a valid Git repository.")
         sys.exit(1)
-    
-    # Build the command to execute with LFS configuration
-    # For git-upload-pack and git-receive-pack, we need to pass the LFS URL
+
+    # Build the command to execute
     if command in ['git-upload-pack', 'git-receive-pack']:
-        # Use SSH LFS protocol - no URL needed!
+        # Use SSH LFS protocol
         git_cmd = ['git', '-c', 'lfs.sshtransfer=always', command.replace('git-', ''), repo_full_path]
+    elif command == 'git-lfs-transfer':
+        # Execute git-lfs-transfer with the repository path and operation
+        operation = os.environ.get('GIT_LFS_OPERATION', 'upload')
+        git_cmd = ['git-lfs-transfer', repo_full_path, operation]
+    elif command == 'git-lfs-authenticate':
+        # For git-lfs-authenticate, we need to return JSON with LFS URL
+        operation = os.environ.get('GIT_LFS_OPERATION', 'upload')
+        lfs_url = setup_lfs_environment(repo_name)
+
+        # FIX: Return clean JSON response with no bearer token
+        import json
+        response = {
+            "href": lfs_url,
+            "header": {}  # Empty header, no dummy token
+        }
+        # CRITICAL: Print ONLY the JSON and protocol version, nothing else to stdout
+        print(json.dumps(response))
+        print("version=1")  # Required protocol version line
+        sys.exit(0)
     else:
         # For other commands, execute as-is
         git_cmd = [command, repo_full_path]
@@ -353,19 +381,24 @@ def execute_git_command(command, repo_name):
 
 def main():
     """Main entry point for Git SSH routing"""
-    
+
     # Load environment variables
     load_environment()
-    
+
     # Parse the Git command
     try:
         command, repo_name, repo_path, is_write = parse_git_command()
     except Exception as e:
         print(f"Error parsing command: {e}")
         sys.exit(1)
-    
+
     # Get the user from SSH key
     username = get_user_from_ssh_key()
+
+    # Check if we have a valid username
+    if not username:
+        print("Access denied: Unknown SSH key")
+        sys.exit(1)
     
     # Check LDAP access
     if not check_ldap_access(username, repo_name, is_write):

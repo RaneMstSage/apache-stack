@@ -17,10 +17,12 @@ RUN apt-get update && apt-get install -y \
 
 # Add this section after the Git LFS installation
 # Install Go and git-lfs-transfer for SSH LFS support
+ENV PATH="/root/go/bin:/usr/local/go/bin:$PATH"
 RUN apt-get update && apt-get install -y golang-go && \
     go install github.com/charmbracelet/git-lfs-transfer@latest && \
     cp /root/go/bin/git-lfs-transfer /usr/local/bin/ && \
-    chmod +x /usr/local/bin/git-lfs-transfer
+    chmod +x /usr/local/bin/git-lfs-transfer && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Python MySQL connector and requests via pip
 RUN pip3 install mysql-connector-python requests --break-system-packages
@@ -82,6 +84,9 @@ RUN git config --system --add safe.directory '*'
 # Configure Git LFS globally
 RUN git lfs install --system
 
+# Tell every repo to use the shared bucket
+RUN git config --system lfs.storage /usr/local/git-lfs-storage
+
 # Create Git LFS storage directory
 RUN mkdir -p /usr/local/git-lfs-storage && \
     chown -R daemon:apache-stack /usr/local/git-lfs-storage && \
@@ -109,6 +114,10 @@ RUN mkdir -p /var/log && \
     chmod 755 /var/log && \
     touch /var/log/svn_proxy.log /var/log/git_proxy.log && \
     chmod 666 /var/log/svn_proxy.log /var/log/git_proxy.log
+
+# Verify git-lfs-transfer is accessible
+RUN which git-lfs-transfer >/dev/null 2>&1 && \
+    git-lfs-transfer version || true
 
 # Expose SSH port
 EXPOSE 22
