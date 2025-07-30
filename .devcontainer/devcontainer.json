@@ -1,0 +1,36 @@
+{
+  "name": "Apache-Stack Workspace",
+  "build": {
+    "dockerfile": "../Dockerfile.dev",   // we’ll add this next
+    "context": "../",
+    "args": {
+      "VARIANT": "3.12"                  // Python version for Giftless
+    }
+  },
+  "remoteUser": "vscode",
+
+  // Automatically pull sub-modules
+  "updateContentCommand": "git submodule update --init --recursive",
+
+  // Services from docker-compose
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "nginx",                    // container you want VSC to attach to
+  "workspaceFolder": "/workspace/apache-stack",
+
+  "postCreateCommand": "pip install -e giftless-source[dev]",
+  "features": {
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
+  },
+  "forwardPorts": [80, 443, 5000],
+  "customizations": {
+    "vscode": {
+      "settings": { "python.defaultInterpreterPath": "/usr/local/bin/python" },
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}

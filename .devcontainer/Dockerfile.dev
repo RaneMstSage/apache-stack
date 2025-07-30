@@ -1,0 +1,13 @@
+ARG VARIANT=3.12
+FROM mcr.microsoft.com/vscode/devcontainers/python:${VARIANT}
+
+# Install system deps you need for Giftless, Apache utils, etc.
+RUN apt-get update && \
+    apt-get install -y git-lfs ldap-utils && \
+    git lfs install --system && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user the devcontainer expects
+ARG USERNAME=vscode
+RUN useradd -m ${USERNAME}
+USER ${USERNAME}
