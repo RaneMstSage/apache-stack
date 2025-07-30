@@ -189,6 +189,22 @@ RUN mkdir -p /usr/local/apache2/git-lfs-storage && \
     chmod -R 775 /usr/local/apache2/git-lfs-storage && \
     find /usr/local/apache2/git-lfs-storage -type d -exec chmod g+s {} \;
 
+# Install Go (needed to build git-lfs-transfer)
+RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz \
+ && tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz \
+ && rm go1.21.5.linux-amd64.tar.gz
+
+# Set Go environment
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/root/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Build and install git-lfs-transfer
+RUN go install github.com/charmbracelet/git-lfs-transfer@latest
+
+# Verify installation
+RUN which git-lfs-transfer
+
 # Configure Apache to run as apache user with apache-stack group
 RUN sed -i 's/^User.*/User apache/' /usr/local/apache2/conf/httpd.conf && \
     sed -i 's/^Group.*/Group apache-stack/' /usr/local/apache2/conf/httpd.conf
