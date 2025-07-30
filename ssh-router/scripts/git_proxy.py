@@ -166,6 +166,29 @@ def parse_git_command():
     
     return command, repo_name, repo_path, is_write
 
+def setup_lfs_environment(repo_name):
+    """Set up Git LFS environment variables for the repository"""
+    # Build the LFS URL based on the repository path
+    # Handle both org/repo and repo formats
+    lfs_base_url = "https://code.mstsage.com/git"
+
+    # Ensure repo_name has .git suffix for the URL
+    if not repo_name.endswith('.git'):
+        repo_full = f"{repo_name}.git"
+    else:
+        repo_full = repo_name
+
+    # IMPORTANT: Include /git/ in the URL path
+    lfs_url = f"{lfs_base_url}/{repo_full}/info/lfs"
+
+    # Set LFS environment variables
+    os.environ['GIT_LFS_SKIP_SMUDGE'] = '0'  # Enable LFS
+
+    # Log for debugging
+    logger.info(f"Set LFS URL for repository: {lfs_url}")
+
+    return lfs_url
+
 def get_user_from_ssh_key():
     """Get the Redmine username associated with the SSH key used for authentication"""
     fingerprint = get_ssh_key_fingerprint()
@@ -311,14 +334,23 @@ def execute_git_command(command, repo_name):
         print(f"Error: '{repo_name}' is not a valid Git repository.")
         sys.exit(1)
     
-    # Build the command to execute
-    git_cmd = [command, repo_full_path]
-    
+    # Set up LFS environment
+    lfs_url = setup_lfs_environment(repo_name)
+
+    # Build the command to execute with LFS configuration
+    # For git-upload-pack and git-receive-pack, we need to pass the LFS URL
+    if command in ['git-upload-pack', 'git-receive-pack']:
+        # Use git with -c option to pass LFS configuration
+        git_cmd = ['git', '-c', f'lfs.url={lfs_url}', command.replace('git-', ''), repo_full_path]
+    else:
+        # For other commands, execute as-is
+        git_cmd = [command, repo_full_path]
+
     logger.info(f"Executing: {' '.join(git_cmd)}")
-    
+
     try:
         # Execute the Git command
-        os.execvp(command, git_cmd)
+        os.execvp(git_cmd[0], git_cmd)
     except Exception as e:
         logger.error(f"Error executing Git command: {e}")
         sys.exit(1)
