@@ -357,12 +357,11 @@ services:
     environment:
       - TZ=America/New_York
       - GIFTLESS_CONFIG_FILE=/etc/giftless.yaml
-      - PYTHONPATH=/app/custom
     ports:
       - "5000:5000"
     volumes:
       - ${DOCKER_VOLUMES_BASE}/giftless/config.yaml:/etc/giftless.yaml:ro
-      - ${DOCKER_VOLUMES_BASE}/giftless/custom_auth.py:/app/custom/custom_auth.py:ro  # Add this line
+      - ${DOCKER_VOLUMES_BASE}/giftless/apache_proxy.py:/app/giftless/auth/apache_proxy.py:ro
       - ${WSL_GIT_LFS_PATH}:/data/lfs-storage
     networks:
       - apache-network
