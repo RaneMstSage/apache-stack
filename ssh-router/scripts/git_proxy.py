@@ -340,7 +340,8 @@ def execute_git_command(command, repo_name):
     # For git-upload-pack and git-receive-pack, we need to pass the LFS URL
     if command in ['git-upload-pack', 'git-receive-pack']:
         # Use git with -c option to pass LFS configuration
-        git_cmd = ['git', '-c', f'lfs.url={lfs_url}', command.replace('git-', ''), repo_full_path]
+        # ADD THIS CONFIG to force SSH LFS protocol
+        git_cmd = ['git', '-c', f'lfs.url={lfs_url}', '-c', 'lfs.sshtransfer=always', command.replace('git-', ''), repo_full_path]
     else:
         # For other commands, execute as-is
         git_cmd = [command, repo_full_path]
