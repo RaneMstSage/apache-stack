@@ -7,7 +7,7 @@ RUN apt update && apt install -y \
     libpsl-dev perl python3 python3-dev python3-venv swig scons apache2-utils openssl ca-certificates \
     sqlite3 libsqlite3-dev libutf8proc-dev libserf-dev uuid-dev liblz4-dev \
     default-jdk libperl-dev ruby ruby-dev \
-    git \
+    git git-lfs \
     python3-requests \
     vim neovim nano \
  && rm -rf /var/lib/apt/lists/*
@@ -179,6 +179,9 @@ RUN usermod -a -G apache-stack daemon 2>/dev/null || true
 
 # Configure Git to trust all repository directories
 RUN git config --system --add safe.directory '*'
+
+# Configure GIt LFS globablly
+RUN git lfs install --system
 
 # Configure Apache to run as apache user with apache-stack group
 RUN sed -i 's/^User.*/User apache/' /usr/local/apache2/conf/httpd.conf && \
