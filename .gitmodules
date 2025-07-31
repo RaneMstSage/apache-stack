@@ -1,3 +1,0 @@
-[submodule "lfs-test-server"]
-	path = lfs-test-server
-	url = https://github.com/git-lfs/lfs-test-server.git
