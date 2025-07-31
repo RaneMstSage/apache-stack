@@ -6,14 +6,18 @@ This repository builds a comprehensive web application stack with Apache HTTPD 2
 - Docker
 - Docker Compose v2+
 - Domain name(s) for SSL certificates (optional for development)
+- Git LFS client (`git lfs version`)
 
-## ✨ New Features
+## ✨ Features
 - ✅ Nginx reverse proxy providing a unified entry point
 - ✅ Automatic SSL certificate management with Let's Encrypt
 - ✅ HTTP/2 support for improved performance
-- ✅ LDAP proxying for centralized authentication
-- ✅ Hostname-based routing to different services
-- ✅ Optimized caching for static assets
+- ✅ LDAP centralized authentication with group-based access control
+- ✅ SSH routing with dynamic database authentication
+- ✅ Git repositories with full LFS support (SSH only)
+- ✅ SVN repositories with collection-based organization
+- ✅ Redmine integration with SSH key management
+- ✅ Multi-instance Apache for load balancing
 - ✅ Enhanced security with proper headers and timeouts
 
 ## 🏗️ Architecture Overview
@@ -21,13 +25,15 @@ This repository builds a comprehensive web application stack with Apache HTTPD 2
 ```
    External Clients
          │
-         ▼
-      [Nginx]   ← Let's Encrypt Certificates
-         │
+         ├─────────── Port 2222 ──→ [SSH Router]
+         │                               │
+         ▼                               ├→ Admin → Windows Host
+      [Nginx]   ← Let's Encrypt         ├→ Git → Repositories (with LFS)
+         │                               └→ SVN → Collections
          ├─────────┬──────────┬──────────┐
          │         │          │          │
          ▼         ▼          ▼          ▼
-   [Apache]    [Redmine]   [LDAP]    [Other Services]
+   [Apache 1-3]  [Redmine]   [LDAP]   [LFS Server]
       │ │
       │ └────────────────┐
       │                  │
@@ -35,72 +41,58 @@ This repository builds a comprehensive web application stack with Apache HTTPD 2
  [PHP-FPM]       [Git/SVN/Python/Lua]
 ```
 
-Nginx serves as the entrypoint, routing requests to the appropriate backend service based on hostname or URL path. Apache continues to host PHP applications, Git/SVN repositories, and more.
+## 📋 Current Status
 
-## 📋 Setup Guide
+### ✅ Completed Features
+- Full SSH routing with database authentication
+- Git repositories with LFS support (SSH only, no HTTPS)
+- SVN repositories with collection-based access
+- LDAP group authorization
+- Nginx reverse proxy with SSL
+- Redmine integration for project management
+- Dynamic SSH key management (no container restarts needed)
+- MySQL database for Redmine and authentication
+- Searxng private search engine integration
 
-### 1. Directory Structure Setup
+### 🚧 Known Limitations
+- VS Code Remote SSH not yet configured for Git operations
+- Workaround: Use terminal for Git operations or configure VS Code to use external terminal
 
-Create the necessary directory structure:
+### 📝 Important: Git Access Protocol
+**All Git operations now use SSH protocol on port 2222. HTTPS access has been deprecated for security and to ensure proper LFS functionality.**
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
 
 ```bash
-# Set your volumes base directory (update this to your preferred location)
-export DOCKER_VOLUMES_BASE="/path/to/your/volumes/apache-stack"
-
-# Create Nginx directories
-mkdir -p ${DOCKER_VOLUMES_BASE}/nginx/{conf.d,ssl,logs,cache,error_pages}
-
-# Create Certbot directories for Let's Encrypt
-mkdir -p ${DOCKER_VOLUMES_BASE}/certbot/{conf,www,logs}
-
-# Set proper permissions
-chmod -R 755 ${DOCKER_VOLUMES_BASE}/nginx
-chmod -R 755 ${DOCKER_VOLUMES_BASE}/certbot
+git clone https://github.com/yourusername/apache-stack.git
+cd apache-stack
 ```
 
-### 2. Configuration Files
+### 2. Set Up Environment Variables
 
-Copy the default Nginx configuration files from the `config-templates/nginx` directory:
-
-```bash
-# Copy all configuration files
-cp config-templates/nginx/nginx.conf ${DOCKER_VOLUMES_BASE}/nginx/
-cp config-templates/nginx/stream.conf ${DOCKER_VOLUMES_BASE}/nginx/
-cp config-templates/nginx/conf.d/* ${DOCKER_VOLUMES_BASE}/nginx/conf.d/
-cp config-templates/nginx/error_pages/* ${DOCKER_VOLUMES_BASE}/nginx/error_pages/
-
-# Create 502.html error page (or copy it from the template directory)
-cp config-templates/nginx/502.html ${DOCKER_VOLUMES_BASE}/nginx/
-```
-
-### 3. SSL Certificate Setup
-
-For development environments, create a self-signed certificate:
+Create a `.env` file with the following:
 
 ```bash
-# Generate a self-signed certificate
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.key \
-  -out ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.crt \
-  -subj "/CN=localhost"
+# Base directory for Docker volumes
+DOCKER_VOLUMES_BASE=/home/yourusername/docker-volumes/apache-stack
 
-# Set proper permissions
-chmod 600 ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.key
-chmod 644 ${DOCKER_VOLUMES_BASE}/nginx/ssl/default.crt
-```
+# WSL paths for repositories (adjust for your system)
+WSL_GIT_REPOS_PATH=/home/yourusername/repositories/git
+WSL_SVN_REPOS_PATH=/home/yourusername/repositories/svn
+WSL_GIT_LFS_PATH=/home/yourusername/repositories/git-lfs-storage
 
-### 4. Setup Docker Environment
-
-Create or modify your `.env` file to include the following variables:
-
-```bash
 # Nginx ports
 NGINX_HTTP_PORT=80
 NGINX_HTTPS_PORT=443
 
-# LDAP ports (proxied through Nginx)
-LDAP_PORT=389
-LDAPS_PORT=636
+# SSH Router
+ADMIN_USERNAME=yourusername
+WINDOWS_SSH_HOST=host.docker.internal
+WINDOWS_SSH_PORT=2221
+GIT_USERNAME=git
+SVN_USERNAME=svn
 
 # Apache ports (for direct access)
 APACHE_HTTP_PORT=8080
@@ -108,169 +100,268 @@ APACHE_HTTPS_PORT=8443
 
 # MySQL settings
 MYSQL_ROOT_PASSWORD=your_secure_password
-MYSQL_DATABASE=apache_stack
-MYSQL_USER=apache_user
-MYSQL_PASSWORD=apache_password
+MYSQL_PORT=3306
 
-# Redmine database settings
+# Redmine settings
+REDMINE_PORT=3000
 REDMINE_DB_DATABASE=redmine
 REDMINE_DB_USERNAME=redmine
 REDMINE_DB_PASSWORD=redmine_password
-REDMINE_SECRET_KEY_BASE=generate_a_secret_key_here
+REDMINE_SECRET_KEY_BASE=generate_a_64_char_secret_key_here
 
 # LDAP settings
-LDAP_ORGANISATION="Your Company"
-LDAP_DOMAIN="example.org"
+LDAP_ORGANISATION=Your Organization
+LDAP_DOMAIN=yourdomain.com
 LDAP_ADMIN_PASSWORD=ldap_admin_password
+LDAP_HOST=openldap
+LDAP_PORT=389
+LDAP_BASE_DN=dc=yourdomain,dc=com
+LDAP_BIND_DN=cn=admin,dc=yourdomain,dc=com
 
-# Base directory for volume mappings
-DOCKER_VOLUMES_BASE=/path/to/your/volumes/apache-stack
+# Searxng settings
+SEARXNG_HTTP_PORT=8888
+SEARXNG_BASE_URL=https://search.yourdomain.com/
+SEARXNG_SECRET=generate_a_secret_key_here
+
+# LFS Server
+LFS_ADMINUSER=lfsadmin
+LFS_ADMINPASS=lfs_admin_password
+```
+
+### 3. Create Directory Structure
+
+```bash
+# Set your volumes base directory
+export DOCKER_VOLUMES_BASE="/home/yourusername/docker-volumes/apache-stack"
+
+# Create all necessary directories
+mkdir -p ${DOCKER_VOLUMES_BASE}/{nginx/{conf.d,ssl,logs,cache},certbot/{conf,www,logs}}
+mkdir -p ${DOCKER_VOLUMES_BASE}/{conf,htdocs,var,uploads,php,python-apps}
+mkdir -p ${DOCKER_VOLUMES_BASE}/redmine/{files,plugins,config,themes}
+mkdir -p ${DOCKER_VOLUMES_BASE}/ssh-router/keys
+mkdir -p ${DOCKER_VOLUMES_BASE}/searxng/{settings,data}
+
+# Create repository directories
+mkdir -p ~/repositories/{git,svn,git-lfs-storage}
+
+# Set permissions
+chmod -R 755 ${DOCKER_VOLUMES_BASE}
+```
+
+### 4. Configure Services
+
+```bash
+# Copy configuration templates
+cp -r config-templates/* ${DOCKER_VOLUMES_BASE}/
+
+# Create admin SSH key file
+touch ${DOCKER_VOLUMES_BASE}/ssh-router/keys/${ADMIN_USERNAME}_authorized_keys
+chmod 600 ${DOCKER_VOLUMES_BASE}/ssh-router/keys/${ADMIN_USERNAME}_authorized_keys
+# Add your SSH public key to this file
+
+# Create repository access configuration
+cat > ${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf << 'EOF'
+[defaults.git]
+read_groups = git-users,admins
+write_groups = git-users,admins
+
+[defaults.svn]
+read_groups = svn-users,admins
+write_groups = svn-users,admins
+EOF
 ```
 
 ### 5. Start the Stack
 
 ```bash
-# Start the stack
+# Build custom images
+docker-compose build
+
+# Start all services
 docker-compose up -d
 
-# Verify that all services are running
+# Check status
 docker-compose ps
+
+# View logs
+docker-compose logs -f
 ```
 
-### 6. Obtain SSL Certificates (For Production)
+## 🔐 SSH Access Configuration
 
-For production environments with a real domain:
+### For Users
+
+1. **Add SSH Key in Redmine**:
+    - Log into Redmine
+    - Go to "My account" → "SSH Keys"
+    - Add your SSH public key
+    - Key is immediately available (no restart needed)
+
+2. **Clone Repositories**:
+   ```bash
+   # Clone via SSH (port 2222)
+   git clone ssh://git@yourdomain.com:2222/project/repo.git
+   ```
+
+3. **Convert Existing Repos to SSH**:
+   ```bash
+   # Change remote URL from HTTPS to SSH
+   git remote set-url origin ssh://git@yourdomain.com:2222/project/repo.git
+   ```
+
+### For Administrators
+
+1. **Admin SSH Access** (to Windows host):
+   ```bash
+   ssh yourusername@yourdomain.com -p 2222
+   ```
+
+2. **Manage Repository Access**:
+    - Edit `${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf`
+    - Changes apply immediately (no restart needed)
+
+## 📦 Git LFS Setup
+
+### For New Repositories
 
 ```bash
-# Replace example.com with your actual domain name
-docker-compose run --rm certbot certonly --webroot -w /var/www/certbot \
-  -d example.com -d www.example.com \
-  --email admin@example.com --agree-tos --no-eff-email
+cd your-repo
+git lfs install
 
-# Reload Nginx to apply the new certificates
-docker-compose exec nginx nginx -s reload
+# Track large files
+git lfs track "*.psd"
+git lfs track "*.zip"
+git lfs track "*.blend"
+
+# Commit LFS config
+git add .gitattributes
+git commit -m "Configure Git LFS"
+git push
 ```
 
-After obtaining certificates, update your Nginx configuration to use them:
+### For Existing Repositories
 
 ```bash
-# Edit the SSL server blocks in your configuration to use the new certificates
-# Example path: ${DOCKER_VOLUMES_BASE}/nginx/conf.d/apache-ssl.conf
-
-# Reload Nginx after making changes
-docker-compose exec nginx nginx -s reload
+# Install LFS and migrate existing large files
+git lfs install
+git lfs track "*.psd"
+git lfs migrate import --include="*.psd" --everything
+git push --force-with-lease
 ```
 
-## 📝 Common Operations
+## 🛠️ Common Operations
 
-### Testing Your Setup
-
-Once the stack is running, you can access your services:
-
-- Main Apache site: `http://localhost/`
-- Direct Apache access: `http://localhost:8080/`
-- Redmine: `http://redmine.localhost/`
-- LDAP access: Configure your LDAP client to connect to `ldap://localhost:389`
-
-### Managing Data Directories
-
-The following directories contain persistent data:
-
-- Apache content: `${DOCKER_VOLUMES_BASE}/htdocs/`
-- Apache configuration: `${DOCKER_VOLUMES_BASE}/conf/`
-- Redmine files: `${DOCKER_VOLUMES_BASE}/redmine/files/`
-- Redmine configuration: `${DOCKER_VOLUMES_BASE}/redmine/config/`
-
-Make sure these directories have appropriate permissions:
-
-```bash
-# For Apache-related directories
-sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/htdocs
-sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/uploads
-sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/var
-
-# For Redmine directories
-sudo chown -R 999:999 ${DOCKER_VOLUMES_BASE}/redmine
-```
-
-### Checking Logs
-
-```bash
-# Nginx logs
-docker-compose exec nginx cat /var/log/nginx/error.log
-docker-compose exec nginx cat /var/log/nginx/access.log
-
-# Apache logs
-docker-compose exec apache cat /usr/local/apache2/logs/error_log
-
-# Certbot logs
-docker-compose exec certbot cat /var/log/letsencrypt/letsencrypt.log
-```
-
-### Certificate Renewal Testing
-
-To test certificate renewal (without actually renewing):
-
-```bash
-docker-compose run --rm certbot certonly --webroot -w /var/www/certbot \
-  -d example.com --dry-run
-```
-
-## 🛡️ Security Considerations
-
-- Ensure your `.env` file has restricted permissions: `chmod 600 .env`
-- Regularly update Docker images with `docker-compose pull` followed by a restart
-- Review Nginx logs for suspicious activity
-- Consider implementing rate limiting for authentication endpoints
-- For production, restrict direct access to Apache by configuring your firewall
-
-## 🔄 Maintenance Tasks
-
-### Restarting Services
+### Service Management
 
 ```bash
 # Restart a specific service
 docker-compose restart nginx
 
-# Restart the entire stack
-docker-compose down && docker-compose up -d
+# View service logs
+docker-compose logs -f ssh-router
+
+# Update images
+docker-compose pull
+docker-compose up -d
 ```
 
-### Updating Configurations
-
-After modifying Nginx configuration files:
+### SSL Certificate Management
 
 ```bash
-# Test the configuration
-docker-compose exec nginx nginx -t
+# Obtain certificates (production)
+docker-compose run --rm certbot certonly --webroot \
+  -w /var/www/certbot -d yourdomain.com -d www.yourdomain.com \
+  --email admin@yourdomain.com --agree-tos --no-eff-email
 
-# Reload Nginx if the test is successful
-docker-compose exec nginx nginx -s reload
+# Test renewal
+docker-compose run --rm certbot renew --dry-run
 ```
 
-### Backing Up Data
-
-Create backups of important data:
+### Database Backup
 
 ```bash
-# Back up Docker volumes
-docker run --rm -v apache-stack_svn_repos:/source:ro -v $(pwd)/backups:/backup \
-  -w /source busybox tar -czf /backup/svn_repos_$(date +%Y%m%d).tar.gz .
+# Backup MySQL databases
+docker-compose exec mysql sh -c \
+  'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --all-databases' \
+  > backups/mysql_$(date +%Y%m%d).sql
 
-docker run --rm -v apache-stack_git_repos:/source:ro -v $(pwd)/backups:/backup \
-  -w /source busybox tar -czf /backup/git_repos_$(date +%Y%m%d).tar.gz .
-
-# Back up MySQL databases
-docker-compose exec mysql sh -c 'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --all-databases' > backups/all_databases_$(date +%Y%m%d).sql
+# Backup repositories
+tar -czf backups/git_repos_$(date +%Y%m%d).tar.gz ~/repositories/git
+tar -czf backups/svn_repos_$(date +%Y%m%d).tar.gz ~/repositories/svn
 ```
 
-## 🚀 Next Steps
+## 🐛 Troubleshooting
 
-- [ ] Configure automatic Nginx reload when certificates are renewed
-- [ ] Implement rate limiting for sensitive endpoints
-- [ ] Add monitoring and alerting for service health
-- [ ] Configure HTTP/3 (QUIC) for even better performance
-- [ ] Implement Web Application Firewall (WAF) rules
+### SSH Connection Issues
+
+```bash
+# Test SSH authentication
+ssh git@yourdomain.com -p 2222
+
+# Check SSH router logs
+docker-compose logs -f ssh-router
+
+# Verify database key lookup
+docker exec -it ssh-router /opt/scripts/get_ssh_keys.py git
+```
+
+### Git LFS Issues
+
+```bash
+# Check LFS status
+git lfs status
+git lfs ls-files
+
+# Enable trace for debugging
+GIT_TRACE=1 git lfs fetch
+```
+
+### Permission Issues
+
+```bash
+# Fix Apache content permissions
+sudo chown -R daemon:daemon ${DOCKER_VOLUMES_BASE}/htdocs
+
+# Fix repository permissions
+sudo chown -R 1000:1002 ~/repositories/git
+sudo chmod -R 775 ~/repositories/git
+```
+
+## 📚 Additional Documentation
+
+- [SSH Router Details](./ssh-router/README.md)
+- [Git LFS Setup Guide](./docs/GIT_LFS_SETUP.md)
+- [LDAP Configuration](./docs/LDAP_CONFIG.md)
+- [Nginx Configuration](./docs/NGINX_CONFIG.md)
+
+## 🔒 Security Considerations
+
+- All Git access via SSH (no HTTPS) for enhanced security
+- SSH keys managed through Redmine database
+- LDAP group-based authorization
+- Admin SSH access uses static key file
+- SSL certificates via Let's Encrypt
+- Fail2ban integration recommended for production
+
+## 📈 Performance Optimization
+
+- Multi-instance Apache for load balancing
+- Nginx caching for static assets
+- PHP-FPM for better PHP performance
+- Redis caching for Searxng
+- Shared Git LFS storage
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
