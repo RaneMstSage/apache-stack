@@ -192,10 +192,10 @@ docker-compose logs -f
 ### For Users
 
 1. **Add SSH Key in Redmine**:
-    - Log into Redmine
-    - Go to "My account" → "SSH Keys"
-    - Add your SSH public key
-    - Key is immediately available (no restart needed)
+   - Log into Redmine
+   - Go to "My account" → "SSH Keys"
+   - Add your SSH public key
+   - Key is immediately available (no restart needed)
 
 2. **Clone Repositories**:
    ```bash
@@ -217,8 +217,8 @@ docker-compose logs -f
    ```
 
 2. **Manage Repository Access**:
-    - Edit `${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf`
-    - Changes apply immediately (no restart needed)
+   - Edit `${DOCKER_VOLUMES_BASE}/ssh-router/repo-access.conf`
+   - Changes apply immediately (no restart needed)
 
 ## 📦 Git LFS Setup
 
@@ -329,10 +329,8 @@ sudo chmod -R 775 ~/repositories/git
 
 ## 📚 Additional Documentation
 
-- [SSH Router Details](./ssh-router/README.md)
-- [Git LFS Setup Guide](./docs/GIT_LFS_SETUP.md)
-- [LDAP Configuration](./docs/LDAP_CONFIG.md)
-- [Nginx Configuration](./docs/NGINX_CONFIG.md)
+- [SSH Router Details](./ssh-router/README.md) - Complete SSH routing implementation
+- Configuration templates in `config-templates/` directory
 
 ## 🔒 Security Considerations
 
