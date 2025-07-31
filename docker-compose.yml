@@ -352,7 +352,7 @@
 
     # Git LFS Server (lfs-test-server)
     lfs-test-server:
-      image: gitlfs/lfs-test-server:latest
+      build: ./lfs-test-server  # Build from local directory
       container_name: lfs-server
       environment:
         - TZ=America/New_York
