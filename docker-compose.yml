@@ -350,29 +350,6 @@
         - nginx
       restart: unless-stopped
 
-    # Git LFS Server (lfs-test-server)
-    lfs-test-server:
-      image: gitlfs/lfs-test-server:latest
-      container_name: lfs-server
-      environment:
-        - TZ=America/New_York
-        - LFS_ADMINUSER=${LFS_ADMINUSER}
-        - LFS_ADMINPASS=${LFS_ADMINPASS}
-        - LFS_HOST=0.0.0.0:9999
-      ports:
-        - "127.0.0.1:9999:9999" # Only accessible from Docker host
-      volumes:
-        - ${WSL_GIT_LFS_PATH}:/data # Same sharded storage
-      networks:
-        - apache-network
-      restart: unless-stopped
-      healthcheck:
-        test: ["CMD", "wget", "-q", "--spider", "http://localhost:9999"]
-        interval: 30s
-        timeout: 10s
-        retries: 3
-        start_period: 10s
-
   networks:
     apache-network:
       driver: bridge
