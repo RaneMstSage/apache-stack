@@ -62,17 +62,9 @@ sed -i "s/ADMIN_USERNAME_PLACEHOLDER/$ADMIN_USERNAME/g" /etc/ssh/sshd_config
 sed -i "s/GIT_USERNAME_PLACEHOLDER/$GIT_USERNAME/g" /etc/ssh/sshd_config
 sed -i "s/SVN_USERNAME_PLACEHOLDER/$SVN_USERNAME/g" /etc/ssh/sshd_config
 
-# Set up authorized keys file path for admin user
+# Set up authorized keys file path for admin user ONLY
 KEYS_FILE="/etc/ssh/keys/${ADMIN_USERNAME}_authorized_keys"
 echo "Admin SSH keys file: $KEYS_FILE"
-
-# Set up authorized keys file path for git user
-GIT_KEYS_FILE="/etc/ssh/keys/${GIT_USERNAME}_authorized_keys"
-echo "Git SSH keys file: $GIT_KEYS_FILE"
-
-# Set up authorized keys file path for SVN user
-SVN_KEYS_FILE="/etc/ssh/keys/${SVN_USERNAME}_authorized_keys"
-echo "SVN SSH keys file: $SVN_KEYS_FILE"
 
 # Create keys directory if it doesn't exist
 mkdir -p /etc/ssh/keys
@@ -84,15 +76,10 @@ touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} "$KEYS_FILE"
 
-# Make sure the git keys file exists (even if empty)
-touch "$GIT_KEYS_FILE"
-chmod 600 "$GIT_KEYS_FILE"
-chown ${GIT_USERNAME}:${GIT_USERNAME} "$GIT_KEYS_FILE"
+# Make the get_ssh_keys.py script executable
+chmod +x /opt/scripts/get_ssh_keys.py
 
-# Make sure the SVN keys file exists (even if empty)
-touch "$SVN_KEYS_FILE"
-chmod 600 "$SVN_KEYS_FILE"
-chown ${SVN_USERNAME}:${SVN_USERNAME} "$SVN_KEYS_FILE"
+echo "Git and SVN users will use database authentication for SSH keys"
 
 # Write environment variables to a file that the scripts can read
 echo "Writing environment variables for SSH sessions..."
@@ -113,7 +100,8 @@ export MYSQL_HOST="${MYSQL_HOST:-mysql}"
 export MYSQL_DATABASE="${MYSQL_DATABASE}"
 export MYSQL_USER="${MYSQL_USER}"
 export MYSQL_PASSWORD="${MYSQL_PASSWORD}"
-export USE_DATABASE_AUTH="${USE_DATABASE_AUTH:-false}"
+export MYSQL_PORT="${MYSQL_PORT:-3306}"
+export USE_DATABASE_AUTH="${USE_DATABASE_AUTH:-true}"
 EOF
 chmod 644 /etc/ssh/ssh-router-env
 
@@ -130,10 +118,11 @@ echo "Added $ADMIN_USERNAME to apache-stack group"
 usermod -a -G apache-stack "$GIT_USERNAME"
 echo "Added $GIT_USERNAME to apache-stack group"
 
-usermod -a -G apache-stack "$SVN_USERNAME"  
+usermod -a -G apache-stack "$SVN_USERNAME"
 echo "Added $SVN_USERNAME to apache-stack group"
 
 echo "SSH router starting with admin user: $ADMIN_USERNAME, git user: $GIT_USERNAME, and svn user: $SVN_USERNAME"
+echo "Using database authentication for Git and SVN SSH keys"
 
 # Execute the main command
 exec "$@"

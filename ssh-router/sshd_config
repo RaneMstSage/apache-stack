@@ -37,7 +37,8 @@ Match User ADMIN_USERNAME_PLACEHOLDER
 
 # Git user routing to Git repositories
 Match User GIT_USERNAME_PLACEHOLDER
-    AuthorizedKeysFile /etc/ssh/keys/GIT_USERNAME_PLACEHOLDER_authorized_keys
+    AuthorizedKeysCommand /opt/scripts/get_ssh_keys.py %u
+    AuthorizedKeysCommandUser root
     ForceCommand /opt/scripts/git_proxy.py
     AllowAgentForwarding no
     AllowTcpForwarding no
@@ -46,7 +47,8 @@ Match User GIT_USERNAME_PLACEHOLDER
 
 # SVN user - route to SVN repositories
 Match User SVN_USERNAME_PLACEHOLDER
-    AuthorizedKeysFile /etc/ssh/keys/SVN_USERNAME_PLACEHOLDER_authorized_keys
+    AuthorizedKeysCommand /opt/scripts/get_ssh_keys.py %u
+    AuthorizedKeysCommandUser root
     ForceCommand /opt/scripts/svn_proxy.py
     AllowAgentForwarding no
     AllowTcpForwarding no
