@@ -4,7 +4,7 @@ RUN apt update && apt install -y \
     wget build-essential pkg-config autoconf libtool bison re2c cmake \
     libssl-dev libexpat1-dev libxml2-dev libjansson-dev liblua5.3-dev \
     zlib1g-dev libbrotli-dev libnghttp2-dev libpcre2-dev libldap2-dev libsasl2-dev \
-    libpsl-dev perl python3 python3-dev python3-venv swig scons apache2-utils openssl ca-certificates \
+    libpsl-dev perl python3 python3-dev python3-venv python3-setuptools swig scons apache2-utils openssl ca-certificates \
     sqlite3 libsqlite3-dev libutf8proc-dev libserf-dev uuid-dev liblz4-dev \
     default-jdk libperl-dev ruby ruby-dev \
     git git-lfs \
@@ -115,10 +115,10 @@ RUN tar xzf mod_fcgid-2.3.9.tar.gz \
  && make \
  && make install
 
-# Add mod_wsgi for Python integration
-RUN wget https://github.com/GrahamDumpleton/mod_wsgi/archive/refs/tags/4.9.4.tar.gz -O mod_wsgi-4.9.4.tar.gz \
- && tar xzf mod_wsgi-4.9.4.tar.gz \
- && cd mod_wsgi-4.9.4 \
+# Add mod_wsgi for Python integration - use newer version for Python 3.12 compatibility
+RUN wget https://github.com/GrahamDumpleton/mod_wsgi/archive/refs/tags/5.0.1.tar.gz -O mod_wsgi-5.0.1.tar.gz \
+ && tar xzf mod_wsgi-5.0.1.tar.gz \
+ && cd mod_wsgi-5.0.1 \
  && ./configure --with-apxs=/usr/local/apache2/bin/apxs --with-python=/usr/bin/python3 \
  && make \
  && make install
