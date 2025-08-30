@@ -57,10 +57,15 @@
         - CHOWN
         - SETGID
         - SETUID
-        - DAC_OVERRIDE
       networks: [apache-network]
+      deploy:
+        resources:
+          limits:
+            memory: 512M
+          reservations:
+            memory: 128M
       healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:8080"]
+        test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
         interval: 30s
         timeout: 10s
         retries: 3
@@ -72,6 +77,15 @@
       environment:
         - TZ=America/New_York
       restart: unless-stopped
+      command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1
+      volumes:
+        - ${DOCKER_VOLUMES_BASE}/redis-data:/data
+      deploy:
+        resources:
+          limits:
+            memory: 256M
+          reservations:
+            memory: 64M
       networks:
         - apache-network
 
@@ -212,6 +226,12 @@
       networks:
         - apache-network
       restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            memory: 1GB
+          reservations:
+            memory: 256M
       # Add healthcheck for MySQL
       healthcheck:
         test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
@@ -247,6 +267,12 @@
       depends_on:
         - mysql
       command: ["rails", "server", "-e", "production", "-p", "3000", "-b", "0.0.0.0"]
+      deploy:
+        resources:
+          limits:
+            memory: 1GB
+          reservations:
+            memory: 256M
       # Add healthcheck
       healthcheck:
         test: ["CMD", "curl", "-f", "http://localhost:3000"]

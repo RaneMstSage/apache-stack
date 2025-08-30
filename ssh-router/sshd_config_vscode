@@ -1,0 +1,65 @@
+# SSH Router Configuration - VS Code Compatible
+Port 22
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+UsePAM no
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Connection settings
+ClientAliveInterval 60
+ClientAliveCountMax 3
+MaxStartups 10:30:100
+TCPKeepAlive yes
+X11Forwarding yes
+
+# Enable SSH key fingerprint exposure (MUST BE GLOBAL)
+ExposeAuthInfo yes
+PermitUserEnvironment yes
+
+# Allow port forwarding for VS Code
+AllowTcpForwarding yes
+AllowAgentForwarding yes
+PermitTunnel yes
+
+# SFTP (needed for VS Code file operations)
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Admin user - allows both direct shell and routing to Windows
+Match User ADMIN_USERNAME_PLACEHOLDER
+    AuthorizedKeysFile /etc/ssh/keys/ADMIN_USERNAME_PLACEHOLDER_authorized_keys
+    # Remove ForceCommand to allow VS Code to work
+    # Users can still manually run the proxy script if needed
+    AllowAgentForwarding yes
+    AllowTcpForwarding yes
+    X11Forwarding yes
+    PermitTTY yes
+
+# Git user routing to Git repositories
+Match User GIT_USERNAME_PLACEHOLDER
+    AuthorizedKeysCommand /opt/scripts/get_ssh_keys.py %u
+    AuthorizedKeysCommandUser root
+    ForceCommand /opt/scripts/git_proxy.py
+    AllowAgentForwarding no
+    AllowTcpForwarding no
+    X11Forwarding no
+    PermitTTY no
+
+# SVN user - route to SVN repositories
+Match User SVN_USERNAME_PLACEHOLDER
+    AuthorizedKeysCommand /opt/scripts/get_ssh_keys.py %u
+    AuthorizedKeysCommandUser root
+    ForceCommand /opt/scripts/svn_proxy.py
+    AllowAgentForwarding no
+    AllowTcpForwarding no
+    X11Forwarding no
+    PermitTTY no

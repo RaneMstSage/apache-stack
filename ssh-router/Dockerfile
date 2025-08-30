@@ -98,13 +98,17 @@ RUN mkdir -p /var/run/sshd /etc/ssh/keys
 
 # Copy configuration and scripts
 COPY sshd_config /etc/ssh/sshd_config
+COPY sshd_config_vscode /etc/ssh/sshd_config_vscode
 COPY scripts/ /opt/scripts/
 COPY entrypoint.sh /entrypoint.sh
+COPY entrypoint_vscode.sh /entrypoint_vscode.sh
 
 # Fix line endings and set permissions
 RUN sed -i 's/\r$//' /entrypoint.sh && \
+    sed -i 's/\r$//' /entrypoint_vscode.sh && \
     sed -i 's/\r$//' /opt/scripts/*.py && \
-    chmod +x /opt/scripts/*.py /entrypoint.sh
+    sed -i 's/\r$//' /opt/scripts/*.sh 2>/dev/null || true && \
+    chmod +x /opt/scripts/*.py /opt/scripts/*.sh /entrypoint.sh /entrypoint_vscode.sh
 
 # Generate host keys
 RUN ssh-keygen -A
@@ -122,6 +126,6 @@ RUN which git-lfs-transfer >/dev/null 2>&1 && \
 # Expose SSH port
 EXPOSE 22
 
-# Use entrypoint to create user dynamically
-ENTRYPOINT ["/entrypoint.sh"]
+# Use VS Code compatible entrypoint
+ENTRYPOINT ["/entrypoint_vscode.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

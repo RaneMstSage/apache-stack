@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y \
     wget build-essential pkg-config autoconf libtool bison re2c cmake \
     libssl-dev libexpat1-dev libxml2-dev libjansson-dev liblua5.3-dev \
-    zlib1g-dev libbrotli-dev libnghttp2-dev libpcre3-dev libldap2-dev libsasl2-dev \
+    zlib1g-dev libbrotli-dev libnghttp2-dev libpcre2-dev libldap2-dev libsasl2-dev \
     libpsl-dev perl python3 python3-dev python3-venv swig scons apache2-utils openssl ca-certificates \
     sqlite3 libsqlite3-dev libutf8proc-dev libserf-dev uuid-dev liblz4-dev \
     default-jdk libperl-dev ruby ruby-dev \
