@@ -12,21 +12,20 @@ fi
 # Ensure scripts are executable before creating users
 chmod +x /opt/scripts/*.py 2>/dev/null || true
 chmod +x /opt/scripts/*.sh 2>/dev/null || true
-chmod +x /opt/scripts/admin_shell.sh /opt/scripts/windows_proxy_smart.py
 
 echo "Creating SSH user: $ADMIN_USERNAME"
 # Create the admin user if it doesn't exist
 if ! id "$ADMIN_USERNAME" &>/dev/null; then
-    useradd -m -s /opt/scripts/admin_shell.sh "$ADMIN_USERNAME"
-    echo "Created user: $ADMIN_USERNAME with smart shell"
+    useradd -m -s /bin/bash "$ADMIN_USERNAME"
+    echo "Created user: $ADMIN_USERNAME"
 
     # Unlock the account (important for SSH key-only auth)
     usermod -p '*' "$ADMIN_USERNAME"
     echo "Unlocked user account"
 else
     echo "User $ADMIN_USERNAME already exists"
-    # Update shell to smart shell
-    usermod -s /opt/scripts/admin_shell.sh "$ADMIN_USERNAME"
+    # Update shell to bash
+    usermod -s /bin/bash "$ADMIN_USERNAME"
 fi
 
 # Create git user for repository access
@@ -86,10 +85,7 @@ touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} "$KEYS_FILE"
 
-# Make scripts executable (ensure admin_shell.sh is executable)
-chmod +x /opt/scripts/*.py 2>/dev/null || true
-chmod +x /opt/scripts/*.sh 2>/dev/null || true
-chmod +x /opt/scripts/admin_shell.sh /opt/scripts/windows_proxy_smart.py
+# Scripts already made executable at the beginning of the script
 
 echo "Git and SVN users will use database authentication for SSH keys"
 

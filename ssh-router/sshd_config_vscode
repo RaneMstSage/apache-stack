@@ -34,11 +34,10 @@ PermitTunnel yes
 # SFTP (needed for VS Code file operations)
 Subsystem sftp /usr/lib/openssh/sftp-server
 
-# Admin user - allows both direct shell and routing to Windows
+# Admin user - acts as jump host for VS Code connections
 Match User ADMIN_USERNAME_PLACEHOLDER
     AuthorizedKeysFile /etc/ssh/keys/ADMIN_USERNAME_PLACEHOLDER_authorized_keys
-    # Remove ForceCommand to allow VS Code to work
-    # Users can still manually run the proxy script if needed
+    # NO ForceCommand - let this be a normal jump host for VS Code
     AllowAgentForwarding yes
     AllowTcpForwarding yes
     X11Forwarding yes

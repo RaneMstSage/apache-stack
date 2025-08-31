@@ -1,0 +1,34 @@
+# SSH Configuration for VS Code with ProxyJump
+# Place this in your ~/.ssh/config file on Windows
+# Update the HostName, User, and Port values to match your setup
+
+# The SSH router (jump host)
+Host code-router
+    HostName code.mstsage.com
+    Port 2222
+    User sage
+    # Add your SSH key if needed
+    # IdentityFile ~/.ssh/id_rsa
+
+# Windows target via jump host
+Host code-win
+    HostName 192.168.1.35
+    Port 2221
+    User Sage
+    ProxyJump code-router
+    ServerAliveInterval 30
+    ServerAliveCountMax 4
+    # Add your SSH key if needed
+    # IdentityFile ~/.ssh/id_rsa
+
+# Alternative: Direct Windows connection (if inside network)
+Host code-win-direct
+    HostName 192.168.1.35
+    Port 2221
+    User Sage
+    ServerAliveInterval 30
+    ServerAliveCountMax 4
+
+# Usage:
+# In VS Code, connect to "code-win" to route through the SSH router
+# This creates a single end-to-end SSH session that supports port forwarding
