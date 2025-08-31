@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     neovim \
     netcat-openbsd \
     curl \
+    file \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -103,12 +104,23 @@ COPY scripts/ /opt/scripts/
 COPY entrypoint.sh /entrypoint.sh
 COPY entrypoint_vscode.sh /entrypoint_vscode.sh
 
-# Fix line endings and set permissions
-RUN sed -i 's/\r$//' /entrypoint.sh && \
-    sed -i 's/\r$//' /entrypoint_vscode.sh && \
-    sed -i 's/\r$//' /opt/scripts/*.py && \
-    sed -i 's/\r$//' /opt/scripts/*.sh 2>/dev/null || true && \
-    chmod +x /opt/scripts/*.py /opt/scripts/*.sh /entrypoint.sh /entrypoint_vscode.sh
+# Fix line endings and set permissions (simplified and fixed)
+RUN set -eux; \
+    # Fix line endings for all scripts
+    find /opt/scripts -type f \( -name "*.py" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} \; ; \
+    sed -i 's/\r$//' /entrypoint.sh /entrypoint_vscode.sh; \
+    # Ensure shebang exists
+    grep -q '^#!' /opt/scripts/admin_shell.sh || sed -i '1i#!/bin/bash' /opt/scripts/admin_shell.sh; \
+    # Set proper ownership and permissions for ALL scripts
+    chown -R root:root /opt/scripts; \
+    chmod 755 /opt/scripts; \
+    find /opt/scripts -type f -name "*.sh" -exec chmod 755 {} \; ; \
+    find /opt/scripts -type f -name "*.py" -exec chmod 755 {} \; ; \
+    chmod 755 /entrypoint.sh /entrypoint_vscode.sh; \
+    # Validate the script is runnable
+    /bin/bash -n /opt/scripts/admin_shell.sh; \
+    # List all scripts to verify permissions
+    ls -la /opt/scripts/
 
 # Generate host keys
 RUN ssh-keygen -A

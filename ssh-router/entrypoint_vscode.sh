@@ -9,6 +9,11 @@ if [ -z "$ADMIN_USERNAME" ]; then
     exit 1
 fi
 
+# Ensure scripts are executable before creating users
+chmod +x /opt/scripts/*.py 2>/dev/null || true
+chmod +x /opt/scripts/*.sh 2>/dev/null || true
+chmod +x /opt/scripts/admin_shell.sh /opt/scripts/windows_proxy_smart.py
+
 echo "Creating SSH user: $ADMIN_USERNAME"
 # Create the admin user if it doesn't exist
 if ! id "$ADMIN_USERNAME" &>/dev/null; then
@@ -81,9 +86,10 @@ touch "$KEYS_FILE"
 chmod 600 "$KEYS_FILE"
 chown ${ADMIN_USERNAME}:${ADMIN_USERNAME} "$KEYS_FILE"
 
-# Make scripts executable
-chmod +x /opt/scripts/*.py
-chmod +x /opt/scripts/*.sh
+# Make scripts executable (ensure admin_shell.sh is executable)
+chmod +x /opt/scripts/*.py 2>/dev/null || true
+chmod +x /opt/scripts/*.sh 2>/dev/null || true
+chmod +x /opt/scripts/admin_shell.sh /opt/scripts/windows_proxy_smart.py
 
 echo "Git and SVN users will use database authentication for SSH keys"
 
